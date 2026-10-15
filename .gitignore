@@ -1,0 +1,9 @@
+# Ow database files generated at runtime
+ow-data.json
+*.ow-data.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

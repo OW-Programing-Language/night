@@ -1,0 +1,48 @@
+# Todo app on the Night framework (Ow).
+# Run with the Ow toolchain:  owc --run todo_app.ow   (or OwIDE "Run")
+# Then open http://localhost:8080/ or use the JSON API below.
+
+model Todo:
+  text string
+  done bool
+
+fn page():
+  set html string: "<!doctype html><meta charset=utf-8><title>Night Todos</title><h1>Night &middot; Todos</h1><ul>"
+  set all: find Todo
+  set i int: 0
+  while: i < len(all)
+    set t: all[i]
+    set mark string: "[ ]"
+    if: t.done == true
+      set mark: "[x]"
+    set html: html + "<li>" + mark + " #" + t.id + " " + t.text + "</li>"
+    set i: i + 1
+  return: html + "</ul>"
+
+main:
+  route "GET /":
+    respond: page()
+
+  route "GET /todos":
+    respond: find Todo
+
+  route "POST /todos":
+    save Todo: {text: body(), done: false}
+    respond: response(201, {ok: true, count: len(find Todo)})
+
+  route "POST /todos/:id/done":
+    set want int: int(param("id"))
+    set rows: find Todo where id == want
+    if: len(rows) == 0
+      respond: response(404, {error: "no such todo", id: want})
+    set t: rows[0]
+    set t.done: true
+    save Todo: t
+    respond: t
+
+  route "DELETE /todos/:id":
+    set want int: int(param("id"))
+    delete Todo where id == want
+    respond: {deleted: want, remaining: len(find Todo)}
+
+  serve: 8080
