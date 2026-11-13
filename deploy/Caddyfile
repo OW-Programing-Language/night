@@ -1,7 +1,3 @@
-{
-    email {$NIGHT_ACME_EMAIL:off}
-}
-
 {$NIGHT_DOMAIN} {
     encode zstd gzip
 
