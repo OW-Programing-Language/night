@@ -1,0 +1,53 @@
+# A real qualified OW module, not a class masquerading as a module.
+module Shop.Catalog: CATALOG
+  fn name() -> string:
+    return: "catalog"
+
+  fn requires() -> array:
+    return: []
+
+  fn register() -> int:
+    print: "Catalog: registered"
+    return: 0
+
+  fn start() -> int:
+    print: "Catalog: started"
+    return: 0
+
+  fn stop() -> int:
+    print: "Catalog: stopped"
+    return: 0
+
+  fn available(item int) -> int:
+    if: item == 1
+      return: 1
+    if: item == 2
+      return: 1
+    return: 0
+
+  fn price(item int) -> int:
+    if: item == 1
+      return: 12
+    if: item == 2
+      return: 19
+    return: 0
+
+  fn mount() -> int:
+    route "GET /api/catalog":
+      if: night.is_active("catalog") == 0
+        respond: response(503, {error: "catalog unavailable"})
+      respond: [{id: 1, name: "OW Handbook", price: 12}, {id: 2, name: "Modular Design", price: 19}]
+
+    route "GET /api/catalog/:id":
+      if: night.is_active("catalog") == 0
+        respond: response(503, {error: "catalog unavailable"})
+      set item int: int(param("id"))
+      if: Shop.Catalog.available(item) == 0
+        respond: response(404, {error: "item not found"})
+      respond: {id: item, price: Shop.Catalog.price(item)}
+    return: 0
+
+  fn on_event(type string, payload int) -> int:
+    if: type == "order.placed"
+      print: "Catalog: order placed for item " + payload
+    return: 0

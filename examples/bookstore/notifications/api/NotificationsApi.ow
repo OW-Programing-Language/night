@@ -1,0 +1,3 @@
+module_type NOTIFICATIONS:
+  include NIGHT_COMPONENT
+  fn state(item int) -> string

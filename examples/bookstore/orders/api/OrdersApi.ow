@@ -1,0 +1,5 @@
+# Orders sees only CATALOG's public contract.
+module_type ORDERS:
+  include NIGHT_COMPONENT
+  fn checkout(item int, quantity int) -> int
+  fn total(item int, quantity int) -> int

@@ -1,0 +1,37 @@
+# Separate domain with dependency on ORDERS, not on Orders' implementation.
+functor MakeNotifications(Order: ORDERS) -> NOTIFICATIONS:
+  fn name() -> string:
+    return: "notifications"
+
+  fn requires() -> array:
+    return: ["orders"]
+
+  fn register() -> int:
+    print: "Notifications: registered"
+    return: 0
+
+  fn start() -> int:
+    print: "Notifications: started"
+    return: 0
+
+  fn stop() -> int:
+    print: "Notifications: stopped"
+    return: 0
+
+  fn state(item int) -> string:
+    if: Order.checkout(item, 1) == 1
+      return: "ready"
+    return: "unavailable"
+
+  fn mount() -> int:
+    route "GET /api/notifications/:item":
+      if: night.is_active("notifications") == 0
+        respond: response(503, {error: "notifications unavailable"})
+      set item int: int(param("item"))
+      respond: {item: item, state: notifications.state(item), emitted: night.event_count}
+    return: 0
+
+  fn on_event(type string, payload int) -> int:
+    if: type == "order.placed"
+      print: "Notifications: order.placed for item " + payload
+    return: 0

@@ -1,0 +1,26 @@
+import "fixtures.ow"
+
+main:
+  set night: new NightApp()
+  # Intentionally reverse registration order.
+  call: night.use(new LeafTestModule())
+  call: night.use(new MiddleTestModule())
+  call: night.use(new BaseTestModule())
+  call: assert(night.verify() == 1, "all dependencies present")
+  call: assert(night.boot() == 1, "dependency-ordered boot")
+  call: assert(night.start_count == 3, "all modules started")
+  call: assert(night.names[night.order[0]] == "base", "base starts first")
+  call: assert(night.names[night.order[1]] == "middle", "middle starts second")
+  call: assert(night.names[night.order[2]] == "leaf", "leaf starts last")
+  call: night.emit("test", 7)
+  call: assert(night.event_count == 1, "one published event")
+  call: assert(night.last_event == "test", "event type retained")
+  call: assert(night.disable("base") == 0, "required provider cannot be disabled")
+  call: assert(night.disable("leaf") == 1, "leaf can be stopped")
+  call: night.emit("test", 8)
+  call: assert(night.enable("leaf") == 1, "leaf can restart")
+  call: night.emit("test", 9)
+  call: assert(night.service("base").name() == "base", "service discovery")
+  call: assert(night.stop() == 1, "reverse shutdown")
+  call: assert(night.active_count() == 0, "shutdown clears started set")
+  print: "PASS Night lifecycle and events"

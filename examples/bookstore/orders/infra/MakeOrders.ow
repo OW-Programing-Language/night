@@ -1,0 +1,60 @@
+# True OW native functor: swap CATALOG implementation without rewriting orders.
+functor MakeOrders(Stock: CATALOG) -> ORDERS:
+  fn name() -> string:
+    return: "orders"
+
+  fn requires() -> array:
+    return: ["catalog"]
+
+  fn register() -> int:
+    print: "Orders: registered"
+    return: 0
+
+  fn start() -> int:
+    print: "Orders: started"
+    return: 0
+
+  fn stop() -> int:
+    print: "Orders: stopped"
+    return: 0
+
+  fn checkout(item int, quantity int) -> int:
+    if: quantity <= 0
+      return: 0
+    return: Stock.available(item)
+
+  fn total(item int, quantity int) -> int:
+    return: Stock.price(item) * quantity
+
+  fn mount() -> int:
+    route "GET /api/orders":
+      if: night.is_active("orders") == 0
+        respond: response(503, {error: "orders unavailable"})
+      respond: find Purchase
+
+    route "GET /api/orders/:id":
+      if: night.is_active("orders") == 0
+        respond: response(503, {error: "orders unavailable"})
+      set want int: int(param("id"))
+      set found: find Purchase where id == want
+      if: len(found) == 0
+        respond: response(404, {error: "order not found"})
+      respond: found[0]
+
+    route "POST /api/orders/:item":
+      if: night.is_active("orders") == 0
+        respond: response(503, {error: "orders unavailable"})
+      set item int: int(param("item"))
+      set quantity int: int(body())
+      if: quantity <= 0
+        respond: response(400, {error: "quantity must be positive"})
+      if: orders.checkout(item, quantity) == 0
+        respond: response(404, {error: "catalog item not available"})
+      set amount int: orders.total(item, quantity)
+      save Purchase: {item: item, quantity: quantity, total: amount}
+      call: night.emit("order.placed", item)
+      respond: response(201, {created: true, item: item, quantity: quantity, total: amount})
+    return: 0
+
+  fn on_event(type string, payload int) -> int:
+    return: 0

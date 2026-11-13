@@ -1,0 +1,16 @@
+import "fixtures.ow"
+
+main:
+  set night: new NightApp()
+  call: night.use(new BaseTestModule())
+  call: night.use(new MiddleTestModule())
+  call: night.use(new LeafTestModule())
+  call: assert(night.boot() == 1, "boot")
+  set i int: 0
+  while: i < 70
+    call: assert(night.disable("leaf") == 1, "stop leaf")
+    call: assert(night.enable("leaf") == 1, "restart leaf")
+    set i: i + 1
+  call: assert(night.start_count == 3, "restart order does not overflow")
+  call: assert(night.stop() == 1, "stop after restart")
+  print: "PASS Night 70 restart cycles"

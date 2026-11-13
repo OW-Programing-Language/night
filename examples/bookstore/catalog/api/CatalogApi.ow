@@ -1,0 +1,5 @@
+# Public business interface; infra imports stay inside Catalog.
+module_type CATALOG:
+  include NIGHT_COMPONENT
+  fn available(item int) -> int
+  fn price(item int) -> int

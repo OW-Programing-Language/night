@@ -1,0 +1,8 @@
+import "fixtures.ow"
+
+main:
+  set night: new NightApp()
+  call: night.use(new MissingTestModule())
+  call: assert(night.boot() == 0, "missing dependency must abort")
+  call: assert(night.active_count() == 0, "no modules should start")
+  print: "PASS Night missing dependency"

@@ -1,0 +1,54 @@
+name: Night — OW module contracts, lifecycle and HTTP integration
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OW-Programing-Language/ow-lang
+          path: ow-lang
+          # Known OW runtime with native module/functor signatures and HTTP.
+          ref: 232e3bd1d41d7b69850b7bb8c2f193e242043876
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: ow-lang/pom.xml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build and test upstream OW compiler
+        run: mvn -B -q -f ow-lang/pom.xml package
+      - name: Type-check native modules before executing main
+        run: |
+          java -jar ow-lang/target/OwIDE.jar check examples/bookstore/main.ow
+          for file in tests/lifecycle.ow tests/rollback.ow tests/cycle.ow tests/missing_dependency.ow tests/restart.ow; do
+            java -jar ow-lang/target/OwIDE.jar check "$file"
+          done
+      - name: Verify runtime startup ordering, rollback and events
+        run: |
+          set -euo pipefail
+          java -jar ow-lang/target/OwIDE.jar run tests/lifecycle.ow | tee /tmp/night-lifecycle.log
+          java -jar ow-lang/target/OwIDE.jar run tests/rollback.ow | tee /tmp/night-rollback.log
+          java -jar ow-lang/target/OwIDE.jar run tests/cycle.ow
+          java -jar ow-lang/target/OwIDE.jar run tests/missing_dependency.ow
+          java -jar ow-lang/target/OwIDE.jar run tests/restart.ow > /tmp/night-restart.log
+          python3 tests/verify_output.py /tmp/night-lifecycle.log /tmp/night-rollback.log /tmp/night-restart.log
+      - name: Reject duplicate module names and malformed native components
+        run: |
+          for file in tests/duplicate_module.ow tests/invalid_native_contract.ow; do
+            if java -jar ow-lang/target/OwIDE.jar run "$file"; then
+              echo "ERROR: Night accepted an invalid application: $file"
+              exit 1
+            fi
+          done
+      - name: Live HTTP, persistence and module event smoke test
+        run: python3 tests/http_smoke.py

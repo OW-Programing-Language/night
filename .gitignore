@@ -1,8 +1,11 @@
-# Ow database files generated at runtime
+# Generated Ow model database files and test outputs
 ow-data.json
 *.ow-data.json
-
-# OS / editor
+ow-lang/
+*.log
+target/
+__pycache__/
+.pytest_cache/
 .DS_Store
 Thumbs.db
 .idea/

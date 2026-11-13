@@ -1,86 +1,130 @@
-# Night guide
+# Night framework guide
 
-Night apps are plain Ow programs that use the runtime's built-in web server and
-database. A typical app is a single `.ow` file: models at the top, routes inside
-`main`, and `serve` at the end.
+Night runs on OW's HTTP runtime. OW owns socket listening, route matching,
+status responses, JSON serialization and the persistent model store. Night
+adds modular composition, typed services, events and lifecycle.
 
-## 1. Models
+## 1. Create a business module
 
-```yaml
-model User:
-  name string
-  age int
+Put its public signature under `api/`. Define a native OW module or functor
+in `infra/` that includes `NIGHT_COMPONENT`:
+
+```ow
+module_type CATALOG:
+  include NIGHT_COMPONENT
+  fn available(item int) -> int
 ```
 
-A model is a persistent table. Rows are records (`{name: "Ada", age: 36}`) and
-each gets an auto `id`. Data is stored in `ow-data.json` (override with the
-`OW_DB_PATH` environment variable).
+`NIGHT_COMPONENT` requires `name`, `requires`, `register`, `start`,
+`mount`, `stop` and `on_event`. These methods are checked by OW's
+module type system.
 
-- **Insert:** `save User: {name: "Ada", age: 36}`
-- **Update:** `save User: row` — when the record carries an existing `id`, the
-  matching row is replaced (upsert).
-- **Query:** `find User` (all) or `find User where age > 30`. In a `where`
-  clause, field names are used directly; your handler's variables are also in
-  scope, so `find User where id == want` works.
-- **Delete:** `delete User` or `delete User where id == want`.
+## 2. Declare routes in your module
 
-## 2. Routes
+Routes are *real* OW route statements executed once by `NightApp.boot()`
+when it invokes each component's `mount()` method. For example:
 
-```yaml
-route "GET /users/:id":
-  set want int: int(param("id"))
-  set rows: find User where id == want
-  if: len(rows) == 0
-    respond: response(404, {error: "not found"})
-  respond: rows[0]
+```ow
+fn mount() -> int:
+  route "GET /api/catalog":
+    respond: [{id: 1, name: "Book"}]
+  return: 0
 ```
 
-- The spec is `"METHOD /path"`. Method defaults to `GET`. `:name` segments are
-  path parameters.
-- The body is an inline handler, run per request.
+Route patterns accept `:param` path segments. Supported handlers use the
+OW builtins `param(name)`, `query(name)`, `body()`, `body_json()`,
+`response(status, value)` and `respond:`. A record or array response is
+serialized as JSON, and a string is sent as text or HTML.
 
-### Reading the request
+**OW limitation:** these handler AST blocks are not closures. Handler code
+must use globally bound business modules and the main `night` variable. Do
+not refer to `this`, the local `app` parameter or local `fn mount`
+variables from inside the route body.
 
-| Helper | Returns |
-|---|---|
-| `req` | the full request record: `method`, `path`, `query`, `params`, `body` |
-| `param(name)` | a path parameter (string) |
-| `query(name)` | a query-string value |
-| `body()` | the raw request body (string) |
-| `body_json()` | the request body parsed from JSON |
+## 3. Use a composition root
 
-### Sending a response
-
-- `respond: value` ends the handler and sends `value`:
-  - a **record or array** → `application/json`
-  - a **string** → `text/html` if it starts with `<`, otherwise `text/plain`
-- `respond: response(status, value)` sets an explicit status code.
-
-## 3. Serving
-
-```yaml
+```ow
 main:
-  route "GET /": ...
+  set orders ORDERS: MakeOrders(Shop.Catalog)
+  set night: new NightApp()
+  call: night.use_native_as(orders, "ORDERS")
+  call: night.use_native_as(Shop.Catalog, "CATALOG")
+  call: assert(night.boot() == 1)
+  call: night.mount_system()
   serve: 8080
 ```
 
-`serve: PORT` starts the server and blocks. Requests are handled one at a time,
-so your models stay consistent without extra locking.
+Night resolves all `requires()` dependencies by name. It checks for absent
+providers, duplicate module names and cycles; successful startup uses the
+topological dependency order, regardless of registration order. A negative
+`start()` return causes reverse-order rollback.
 
-## 4. JSON helpers
+## 4. Persistent models
 
-- `json(value)` → JSON string
-- `json_parse(string)` → value
+```ow
+model Purchase:
+  item int
+  total int
+```
 
-## Conventions
+Within a route:
 
-- One app per file; models first, routes in `main`, `serve` last.
-- Group related routes together; factor shared logic into `fn` functions
-  (e.g. a `page()` that renders HTML).
-- Return records/arrays for APIs; return HTML strings for pages.
+```ow
+route "GET /purchases":
+  respond: find Purchase
 
-## Not yet
+route "POST /purchases":
+  save Purchase: {item: 1, total: 12}
+  respond: response(201, {created: true})
+```
 
-Updates are upsert-by-id; there is no partial update or migration system yet.
-Middleware, sessions and templating are planned — for now compose with plain
-functions.
+OW models auto-persist to `ow-data.json` (override with `OW_DB_PATH`).
+`save` upserts a record carrying an existing `id`. `find Model where`
+filters. `delete Model where` removes matching rows. OW currently uses a
+local file, not relational SQL or schema migration.
+
+## 5. Events
+
+```ow
+call: night.emit("order.placed", 1)
+```
+
+Subscribers receive `on_event(type string, payload int)` while active.
+Events are synchronous and local, so avoid slow subscriber methods. This is
+closer to Spring Modulith's application events than to a durable broker.
+Transactional outbox support remains future work.
+
+## 6. Live module operations
+
+Night exposes `is_active`, `disable`, `enable`, `stop`, and
+`service(name)`. Disabling a provider with active dependents is rejected.
+Handlers should explicitly check `night.is_active("orders")` and return
+HTTP 503 when their component is disabled, because OW's HTTP runtime does
+not yet support unregistering routes dynamically.
+
+Repeated stop/restart of a single leaf module does not leak startup order
+entries. The whole application `boot` operation is one-shot; create a new
+NightApp to perform a full application restart.
+
+## 7. Health and inspection
+
+After `night.mount_system()`:
+
+- `GET /_night/health` returns JSON status, number of started modules,
+  and published event count.
+- `GET /_night/modules` returns each module name and current started/enabled
+  state.
+
+These endpoints are **not authenticated**. Put the application behind
+appropriate network access controls in deployments.
+
+## 8. Verification
+
+```bash
+java -jar ow-lang/target/OwIDE.jar check examples/bookstore/main.ow
+python3 tests/http_smoke.py
+```
+
+GitHub Actions builds OW, runs compile-time checks, lifecycle regressions,
+negative cases and a live HTTP process. See
+[Modulith design](modules.md) for dependency and isolation rules.

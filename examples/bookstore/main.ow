@@ -1,0 +1,35 @@
+# Night v0.1: a real HTTP server + three typed business modules.
+# Run from repository root:
+#   java -jar ow-lang/target/OwIDE.jar run examples/bookstore/main.ow
+#   curl -X POST http://localhost:8080/api/orders/1 -d 2
+import "../../src/NightApp.ow"
+import "catalog/api/CatalogApi.ow"
+import "catalog/infra/Catalog.ow"
+import "orders/api/OrdersApi.ow"
+import "orders/api/PurchaseModel.ow"
+import "orders/infra/MakeOrders.ow"
+import "notifications/api/NotificationsApi.ow"
+import "notifications/infra/MakeNotifications.ow"
+
+main:
+  # The global name 'night' is used in HTTP route handlers.
+  # Create modules in OW's type-checked module language.
+  set orders ORDERS: MakeOrders(Shop.Catalog)
+  set notifications NOTIFICATIONS: MakeNotifications(orders)
+  set night: new NightApp()
+
+  # Intentionally register in reverse dependency order: Night sorts startup.
+  call: night.use_native_as(notifications, "NOTIFICATIONS")
+  call: night.use_native_as(orders, "ORDERS")
+  call: night.use_native_as(Shop.Catalog, "CATALOG")
+
+  call: assert(night.boot() == 1, "Night application boot")
+  # Compile-time/runtime typed service retrieval retains the native value.
+  set stock CATALOG: night.service("catalog")
+  call: assert(stock.available(1) == 1, "typed catalog service")
+  call: assert(night.active_count() == 3, "three started modules")
+
+  # Night endpoints: /_night/health and /_night/modules.
+  call: night.mount_system()
+  print: "Night ready at http://localhost:8080"
+  serve: 8080

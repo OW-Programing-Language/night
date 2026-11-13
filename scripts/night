@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+# Thin launcher: use OW directly; Night is an OW library, not a new compiler.
+set -eu
+if [ "$#" -lt 2 ]; then
+  echo "Usage: ./scripts/night <check|run|llvm> <program.ow> [args...]" >&2
+  exit 2
+fi
+command="$1"
+shift
+case "$command" in
+  check|run|llvm) ;;
+  *) echo "Unsupported Night command: $command" >&2; exit 2 ;;
+esac
+jar="${OW_JAR:-ow-lang/target/OwIDE.jar}"
+if [ ! -f "$jar" ]; then
+  echo "OW compiler not found at $jar (set OW_JAR or build ow-lang)" >&2
+  exit 1
+fi
+exec java -jar "$jar" "$command" "$@"
