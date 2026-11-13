@@ -20,6 +20,9 @@ class NightData:
   fn begin():
     return: extension("night.data.begin")
 
+  fn begin_isolation(level):
+    return: extension("night.data.begin_isolation", level)
+
   fn commit():
     return: extension("night.data.commit")
 
