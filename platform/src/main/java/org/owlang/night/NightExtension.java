@@ -120,6 +120,10 @@ public final class NightExtension implements RuntimeExtension {
                 arity(operation, args, 0);
                 yield jdbc.health();
             }
+            case "night.actuator.prometheus" -> {
+                arity(operation, args, 0);
+                yield metrics.prometheus();
+            }
             case "night.actuator.metrics" -> {
                 arity(operation, args, 0);
                 yield metrics.snapshot();
