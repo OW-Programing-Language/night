@@ -66,6 +66,18 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      rabbitmq:
+        image: rabbitmq:4-management-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: night_test
+          RABBITMQ_DEFAULT_PASS: night_ci_password
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 12
       redis:
         image: redis:7-alpine
         ports:
@@ -76,6 +88,9 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
+      NIGHT_RABBITMQ_URL: amqp://night_test:night_ci_password@127.0.0.1:5672/
+      NIGHT_RABBITMQ_ALLOW_INSECURE_LOOPBACK: "true"
+      NIGHT_RABBITMQ_QUEUE: night_ci_events
       NIGHT_REDIS_URL: redis://127.0.0.1:6379
       NIGHT_REDIS_ALLOW_INSECURE_LOOPBACK: "true"
       NIGHT_REDIS_NAMESPACE: night_ci
@@ -100,6 +115,6 @@ jobs:
       - name: Install OW extension SPI
         run: mvn -B -q -f ow-lang/pom.xml install
       - name: Verify JDBC transaction and rollback behavior on PostgreSQL
-        run: mvn -B -f platform/pom.xml -Dtest=NightIsolationTest,NightRepositoryTest,NightOutboxTest,NightRedisTest,NightCredentialStoreTest,NightSchedulerTest test
+        run: mvn -B -f platform/pom.xml -Dtest=NightIsolationTest,NightRepositoryTest,NightOutboxTest,NightRedisTest,NightCredentialStoreTest,NightSchedulerTest,NightRabbitMQTest test
       - name: Rehearse disposable PostgreSQL logical backup and restore
         run: bash tests/postgres_restore.sh
