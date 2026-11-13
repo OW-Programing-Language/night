@@ -12,13 +12,15 @@ It does **not** run Spring Boot or require Java/Spring APIs in OW source.
 |---|---|---|
 | Night Core | Native module/functor lifecycle, dependency checks, rollback, events | `src/NightApp.ow` |
 | Night Web | Built-in OW HTTP and REST route handlers | OW runtime + Night module controllers |
-| Night Security | Bearer auth, experimental RS256/JWKS JWT resource server, RBAC per route, secure headers | `src/modules/security/` |
+| Night Security | Bearer/JWT auth, RBAC, secure headers, experimental bcrypt credential store | `src/modules/security/` |
 | Night Data | JDBC, HikariCP, PostgreSQL/H2, Flyway, transactions, pagination, optimistic updates, PostgreSQL outbox | `src/modules/data/` + `platform/` |
 | Night Actuator | Health, readiness, HTTP metrics, module inspection | `src/modules/actuator/` |
 | Night Config | Environment configuration | `src/modules/config/` |
 | Night Cache | Local TTL cache | `src/modules/cache/` |
 | Night Redis | Shared string cache, TTL and key prefix isolation (TLS Redis) | `src/modules/data/NightRedis.ow` + `platform/` |
 | Night HTTP | Allowlisted outbound HTTPS GET, bounded response and circuit breaker | `src/modules/http/` + `platform/` |
+| Night OpenAPI | Explicit route metadata registry and generated OpenAPI 3.0 document | `src/modules/web/NightOpenApi.ow` + `platform/` |
+| Night Mail | TLS-only SMTP text templates and JDBC handoff auditing | `src/modules/io/NightMail.ow` + `platform/` |
 | Night Validation | Input guards | `src/modules/validation/` |
 | Night Test | Compiler checks, lifecycle tests, secured HTTP+SQL tests | `tests/` + GitHub Actions |
 
@@ -84,6 +86,7 @@ security and JDBC rather than unsecured application-level helper stubs.
 [Modulith architecture](docs/modules.md) ·
 [Bookstore example](examples/bookstore/README.md) ·
 [Deployment templates](docs/deployment.md) · [Redis cache](docs/redis.md) ·
+[Credential store](docs/credentials.md) · [OpenAPI](docs/openapi.md) · [SMTP Mail](docs/mail.md) ·
 [Security/Data increments](docs/incremental-production.md) ·
 [OW starter guide](docs/guide.md)
 
