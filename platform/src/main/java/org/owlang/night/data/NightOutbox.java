@@ -44,7 +44,7 @@ public final class NightOutbox {
                   WHERE ((state = 'PENDING' AND available_at <= CURRENT_TIMESTAMP)
                      OR (state = 'LEASED' AND lease_until < CURRENT_TIMESTAMP))
                   ORDER BY created_at, event_id
-                  FOR UPDATE SKIP LOCKED LIMIT 1
+                  LIMIT 1 FOR UPDATE SKIP LOCKED
                 )
                 RETURNING event_id, topic, payload, attempts
                 """, List.of(worker, leaseSeconds));
