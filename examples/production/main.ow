@@ -14,7 +14,7 @@ import "purchases/infra/MakePurchases.ow"
 
 main:
   set security: new NightSecurity()
-  call: security.public("GET /_night/health")
+  call: security.allow_public("GET /_night/health")
   call: security.role("GET /_night/modules", "ADMIN")
   call: security.role("GET /_night/metrics", "ADMIN")
   call: security.role("GET /_night/ready", "ADMIN")
