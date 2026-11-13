@@ -38,3 +38,44 @@ jobs:
         run: java -cp "ow-lang/target/OwIDE.jar:platform/target/night-platform-0.2.0-SNAPSHOT.jar" dev.oreo.Main check examples/production/main.ow
       - name: Run live secured HTTP + JDBC smoke integration
         run: python3 tests/production_smoke.py
+
+  postgres-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: night_test
+          POSTGRES_PASSWORD: night_test_ci_only
+          POSTGRES_DB: night
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U night_test -d night"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NIGHT_JDBC_URL: jdbc:postgresql://localhost:5432/night
+      NIGHT_JDBC_USER: night_test
+      NIGHT_JDBC_PASSWORD: night_test_ci_only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OW-Programing-Language/ow-lang
+          path: ow-lang
+          ref: 3be777a7ee2c9204ebe653d89e749e0dcfe4b831
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: |
+            ow-lang/pom.xml
+            platform/pom.xml
+      - name: Install OW extension SPI
+        run: mvn -B -q -f ow-lang/pom.xml install
+      - name: Verify JDBC transaction and rollback behavior on PostgreSQL
+        run: mvn -B -f platform/pom.xml -Dtest=NightIsolationTest test
