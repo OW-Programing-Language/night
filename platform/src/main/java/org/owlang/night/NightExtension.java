@@ -14,6 +14,7 @@ import org.owlang.night.security.BearerSecurity;
 import org.owlang.night.security.NightCredentialStore;
 import org.owlang.night.web.NightOpenApi;
 import org.owlang.night.mail.NightMail;
+import org.owlang.night.validation.NightObjectValidation;
 import org.owlang.night.security.NightIpQuota;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public final class NightExtension implements RuntimeExtension {
     private final NightCredentialStore credentials = new NightCredentialStore(jdbc);
     private final NightOpenApi openapi = new NightOpenApi();
     private final NightMail mail = new NightMail(jdbc);
+    private final NightObjectValidation objectValidation = new NightObjectValidation();
     private final NightRepository repository = new NightRepository(jdbc);
     private final NightOutbox outbox = new NightOutbox(jdbc);
     private final NightMetrics metrics = new NightMetrics();
@@ -219,6 +221,10 @@ public final class NightExtension implements RuntimeExtension {
             case "night.cache.clear" -> {
                 arity(operation, args, 0);
                 yield cache.clear();
+            }
+            case "night.validation.object" -> {
+                arity(operation, args, 2);
+                yield objectValidation.validate(args.get(0), list(args, 1));
             }
             case "night.validation.required" -> {
                 arity(operation, args, 1);
