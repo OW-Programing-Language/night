@@ -124,6 +124,27 @@ public final class NightJdbc implements AutoCloseable {
         }
     }
 
+    public int begin(String isolation) {
+        final int level = switch (isolation) {
+            case "READ_COMMITTED" -> Connection.TRANSACTION_READ_COMMITTED;
+            case "REPEATABLE_READ" -> Connection.TRANSACTION_REPEATABLE_READ;
+            case "SERIALIZABLE" -> Connection.TRANSACTION_SERIALIZABLE;
+            default -> throw new IllegalArgumentException("Unsupported transaction isolation level");
+        };
+        if (transaction.get() != null)
+            throw new IllegalStateException("Nested Night JDBC transactions are not supported");
+        Connection connection = connection();
+        try {
+            connection.setTransactionIsolation(level);
+            connection.setAutoCommit(false);
+            transaction.set(connection);
+            return 1;
+        } catch (SQLException | RuntimeException ex) {
+            closeConnection(connection);
+            throw new IllegalStateException("Night JDBC begin failed", ex);
+        }
+    }
+
     public int begin() {
         if (transaction.get() != null)
             throw new IllegalStateException("Nested Night JDBC transactions are not supported");
