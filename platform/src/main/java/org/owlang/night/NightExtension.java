@@ -73,6 +73,10 @@ public final class NightExtension implements RuntimeExtension {
                 arity(operation, args, 0);
                 yield jdbc.begin();
             }
+            case "night.data.begin_isolation" -> {
+                arity(operation, args, 1);
+                yield jdbc.begin(string(args, 0));
+            }
             case "night.data.commit" -> {
                 arity(operation, args, 0);
                 yield jdbc.commit();
