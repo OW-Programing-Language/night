@@ -13,8 +13,8 @@ jobs:
       NIGHT_JDBC_USER: sa
       NIGHT_JDBC_PASSWORD: ""
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
@@ -83,8 +83,8 @@ jobs:
       NIGHT_JDBC_USER: night_test
       NIGHT_JDBC_PASSWORD: night_test_ci_only
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
