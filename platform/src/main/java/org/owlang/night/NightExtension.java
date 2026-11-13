@@ -7,6 +7,7 @@ import org.owlang.night.actuator.NightMetrics;
 import org.owlang.night.cache.NightCache;
 import org.owlang.night.data.NightJdbc;
 import org.owlang.night.data.NightRepository;
+import org.owlang.night.http.NightHttpClient;
 import org.owlang.night.data.NightOutbox;
 import org.owlang.night.security.BearerSecurity;
 import org.owlang.night.security.NightIpQuota;
@@ -25,6 +26,16 @@ public final class NightExtension implements RuntimeExtension {
     private final NightOutbox outbox = new NightOutbox(jdbc);
     private final NightMetrics metrics = new NightMetrics();
     private final NightCache cache = new NightCache();
+    private volatile NightHttpClient outboundHttp;
+
+    private NightHttpClient outboundHttp() {
+        NightHttpClient ready = outboundHttp;
+        if (ready != null) return ready;
+        synchronized (this) {
+            if (outboundHttp == null) outboundHttp = NightHttpClient.fromEnvironment();
+            return outboundHttp;
+        }
+    }
 
     @Override public boolean supports(String operation) {
         return operation.startsWith("night.");
@@ -46,6 +57,10 @@ public final class NightExtension implements RuntimeExtension {
                 arity(operation, args, 2);
                 security.requireRole(string(args, 0), string(args, 1));
                 yield 1;
+            }
+            case "night.http.get" -> {
+                arity(operation, args, 1);
+                yield outboundHttp().get(string(args, 0));
             }
             case "night.config.get" -> {
                 arity(operation, args, 1);
