@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+from concurrent.futures import ThreadPoolExecutor
+import statistics
 import json
 import os
 from pathlib import Path
@@ -117,6 +119,20 @@ def main():
                 huge = "1" * (1024 * 1024 + 1)
                 expect("/api/purchases/1", 413, token=tokens["WRITER"],
                        method="POST", payload=huge)
+                # Bounded concurrency regression (not a production soak test).
+                def health_probe(_):
+                    started = time.monotonic()
+                    status, _, _ = request("/_night/health")
+                    return status, (time.monotonic() - started) * 1000.0
+
+                with ThreadPoolExecutor(max_workers=8) as pool:
+                    measures = list(pool.map(health_probe, range(160)))
+                assert len(measures) == 160
+                assert all(status == 200 for status, _ in measures), measures
+                latencies = sorted(duration for _, duration in measures)
+                p95_ms = latencies[int(len(latencies) * 0.95) - 1]
+                print(f"Night 8-client/160-request smoke: p50={statistics.median(latencies):.1f}ms p95={p95_ms:.1f}ms failures=0")
+
             finally:
                 proc.terminate()
                 try: proc.wait(timeout=8)
