@@ -3,6 +3,8 @@ package org.owlang.night.data;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -11,7 +13,11 @@ class NightOutboxTest {
         Assumptions.assumeTrue(System.getenv().getOrDefault("NIGHT_JDBC_URL", "").startsWith("jdbc:postgresql:"));
         try (NightJdbc jdbc = new NightJdbc()) {
             jdbc.open();
-            jdbc.migrate("filesystem:examples/production/db/migration");
+            Path migrations = Path.of("examples/production/db/migration");
+            if (!Files.isDirectory(migrations))
+                migrations = Path.of("../examples/production/db/migration");
+            assertTrue(Files.isDirectory(migrations), "Flyway SQL migrations must exist");
+            jdbc.migrate("filesystem:" + migrations.toAbsolutePath());
             NightOutbox outbox = new NightOutbox(jdbc);
             String id = "outbox-ci-" + UUID.randomUUID();
             jdbc.begin();
