@@ -7,12 +7,12 @@ NightRabbitMQ is a narrow, OW-native durable queue adapter backed by the officia
 Configure a TLS-protected RabbitMQ virtual host with a scoped user:
 
 ```sh
-NIGHT_RABBITMQ_URL=amqps://night_user:use-a-secret@broker.example.com:5671/
+NIGHT_RABBITMQ_URL=amqps://night_user:use-a-secret@broker.example.com:5671/%2F
 NIGHT_RABBITMQ_QUEUE=night_events
 ```
 
 Plain `amqp://` is rejected outside an explicitly configured local test:
-`NIGHT_RABBITMQ_ALLOW_INSECURE_LOOPBACK=true` and a loopback URI. Do not enable it for production. The broker account must have appropriate configure/write/read permissions only on its queue. Credentials in an environment URI may be visible to operators; use a secret manager.
+`NIGHT_RABBITMQ_ALLOW_INSECURE_LOOPBACK=true` and a loopback URI. Do not enable it for production. The default RabbitMQ virtual host is `/`, encoded as `%2F` in a URI path. A literal trailing `/` means an empty vhost and may fail with `vhost not found`. The broker account must have appropriate configure/write/read permissions only on its queue. Credentials in an environment URI may be visible to operators; use a secret manager.
 
 ```ow
 import "../../src/modules/messaging/NightRabbitMQ.ow"
