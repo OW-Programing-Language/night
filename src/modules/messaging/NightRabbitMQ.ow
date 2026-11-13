@@ -1,0 +1,23 @@
+# RabbitMQ durable queue connector. Requires NIGHT_RABBITMQ_URL=amqps://...
+# Delivery is at-least-once and handlers must deduplicate message_id.
+# OW dispatches allowed application tasks explicitly; no arbitrary broker code eval.
+class NightRabbitMQ:
+  fn new():
+    return: 0
+
+  fn open():
+    return: extension("night.rabbitmq.open")
+
+  fn publish(message_id, json_body):
+    return: extension("night.rabbitmq.publish", message_id, json_body)
+
+  # {present: 0} or {present: 1, delivery_tag, message_id, body, redelivered}
+  fn poll():
+    return: extension("night.rabbitmq.poll")
+
+  fn acknowledge(delivery_tag):
+    return: extension("night.rabbitmq.ack", delivery_tag)
+
+  # requeue=1 retries, requeue=0 discards unless queue has a dead-letter policy.
+  fn reject(delivery_tag, requeue):
+    return: extension("night.rabbitmq.reject", delivery_tag, requeue)
