@@ -1,0 +1,10 @@
+# TLS-required SMTP text sender with named template variables.
+# External SMTP accounts configured in NIGHT_SMTP_* and audited in night_mail_audit.
+# Only call from trusted business services, not from public endpoints.
+class NightMail:
+  fn new():
+    return: 0
+
+  # keys and values are parallel arrays; message_id must be a stable unique ID.
+  fn send(message_id, recipient, subject, template, keys, values):
+    return: extension("night.mail.send", message_id, recipient, subject, template, keys, values)
