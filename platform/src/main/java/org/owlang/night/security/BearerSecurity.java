@@ -6,6 +6,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -25,17 +27,19 @@ public final class BearerSecurity {
     private final List<Credential> credentials = new ArrayList<>();
     private final List<Rule> rules = new ArrayList<>();
     private boolean enabled;
+    private NightJwtResourceServer jwt;
 
     public synchronized boolean isEnabled() { return enabled; }
 
     public synchronized void enable() {
         if (enabled) return;
         String configuration = System.getenv("NIGHT_BEARER_KEYS");
-        if (configuration == null || configuration.isBlank()) {
+        NightJwtResourceServer configuredJwt = NightJwtResourceServer.fromEnvironment();
+        if ((configuration == null || configuration.isBlank()) && configuredJwt == null)
             throw new IllegalStateException(
-                "Night Security needs NIGHT_BEARER_KEYS (ROLE:SHA256_HEX;...)");
-        }
+                    "Night Security needs NIGHT_BEARER_KEYS or complete NIGHT_JWT_* configuration");
         List<Credential> loaded = new ArrayList<>();
+        if (configuration != null && !configuration.isBlank()) {
         for (String token : configuration.split(";")) {
             String[] entry = token.strip().split(":", 2);
             if (entry.length != 2 || !entry[0].matches("[A-Z][A-Z0-9_]{1,31}")
@@ -44,8 +48,9 @@ public final class BearerSecurity {
             }
             loaded.add(new Credential(entry[0], hexDecode(entry[1])));
         }
-        if (loaded.isEmpty()) throw new IllegalStateException("No bearer credentials installed");
+        }
         credentials.addAll(loaded);
+        jwt = configuredJwt;
         enabled = true;
     }
 
@@ -94,14 +99,22 @@ public final class BearerSecurity {
         String token = authorization.substring(7);
         if (token.isBlank() || token.length() > 4096) return unauthorized(exchange);
         byte[] digest = hash(token);
-        String role = null;
+        Set<String> roles = new HashSet<>();
         for (Credential credential : credentials) {
             if (MessageDigest.isEqual(digest, credential.digest))
-                role = credential.role;
+                roles.add(credential.role);
         }
-        if (role == null) return unauthorized(exchange);
-        if ("AUTHENTICATED".equals(required) || required.equals(role) ||
-                "ADMIN".equals(role)) return null;
+        if (roles.isEmpty() && jwt != null) {
+            try {
+                roles.addAll(jwt.roles(token));
+            } catch (Exception invalidToken) {
+                // Fail closed on invalid signature, claims, JWKS fetch errors or malformed tokens.
+                return unauthorized(exchange);
+            }
+        }
+        if (roles.isEmpty()) return unauthorized(exchange);
+        if ("AUTHENTICATED".equals(required) || roles.contains(required)
+                || roles.contains("ADMIN")) return null;
         return json(403, "forbidden");
     }
 
