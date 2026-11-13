@@ -111,6 +111,10 @@ public final class NightExtension implements RuntimeExtension {
                 arity(operation, args, 2);
                 yield outbox.acknowledge(string(args, 0), string(args, 1));
             }
+            case "night.outbox.replay_dead" -> {
+                arity(operation, args, 1);
+                yield outbox.replayDead(string(args, 0));
+            }
             case "night.outbox.fail" -> {
                 arity(operation, args, 4);
                 yield outbox.fail(string(args, 0), string(args, 1), integer(args, 2), integer(args, 3));
