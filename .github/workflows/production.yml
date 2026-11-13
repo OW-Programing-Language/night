@@ -34,6 +34,16 @@ jobs:
         run: mvn -B -q -f ow-lang/pom.xml install
       - name: Run Night platform unit tests and package shaded plugin
         run: mvn -B -q -f platform/pom.xml package
+      - name: Generate platform CycloneDX SBOM
+        run: mvn -B -f platform/pom.xml org.cyclonedx:cyclonedx-maven-plugin:2.9.3:makeBom -DskipTests
+      - name: Upload platform SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: night-platform-sbom
+          path: |
+            platform/target/bom.json
+            platform/target/bom.xml
+          if-no-files-found: error
       - name: Validate production example and imported native modules
         run: java -cp "ow-lang/target/OwIDE.jar:platform/target/night-platform-0.2.0-SNAPSHOT.jar" dev.oreo.Main check examples/production/main.ow
       - name: Run live secured HTTP + JDBC smoke integration
