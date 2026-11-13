@@ -1,0 +1,16 @@
+# Small local TTL cache (non-distributed). Opt-in; not a Redis substitute.
+class NightCache:
+  fn new():
+    return: 0
+
+  fn get(key):
+    return: extension("night.cache.get", key)
+
+  fn put(key, value, ttlSeconds):
+    return: extension("night.cache.put", key, value, ttlSeconds)
+
+  fn evict(key):
+    return: extension("night.cache.evict", key)
+
+  fn clear():
+    return: extension("night.cache.clear")

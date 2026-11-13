@@ -1,0 +1,15 @@
+# Spring Security-inspired starter: route rules + API bearer authentication.
+# Implemented by night-platform's pre-controller OW runtime hook.
+# No plaintext tokens in source; hashes are loaded from NIGHT_BEARER_KEYS.
+class NightSecurity:
+  fn new():
+    return: 0
+
+  fn enable():
+    return: extension("night.security.enable")
+
+  fn public(spec):
+    return: extension("night.security.public", spec)
+
+  fn role(spec, role):
+    return: extension("night.security.role", spec, role)

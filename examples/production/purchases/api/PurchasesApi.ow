@@ -1,0 +1,4 @@
+module_type PURCHASES:
+  include NIGHT_COMPONENT
+  fn accepted(item int, quantity int) -> int
+  fn create(item int, quantity int) -> int

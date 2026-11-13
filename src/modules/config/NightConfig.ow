@@ -1,0 +1,10 @@
+# Externalized environment configuration (no config secrets in source).
+class NightConfig:
+  fn new():
+    return: 0
+
+  fn get(name):
+    return: extension("night.config.get", name)
+
+  fn require(name):
+    return: extension("night.config.require", name)

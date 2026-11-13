@@ -1,0 +1,30 @@
+# Spring JDBC / Flyway-inspired SQL data access for OW.
+# Uses pooled JDBC, prepared parameters, explicit transactions, migrations.
+# Required environment: NIGHT_JDBC_URL, NIGHT_JDBC_USER, NIGHT_JDBC_PASSWORD.
+class NightData:
+  fn new():
+    return: 0
+
+  fn open():
+    return: extension("night.data.open")
+
+  fn migrate(location):
+    return: extension("night.data.migrate", location)
+
+  fn query(sql, params):
+    return: extension("night.data.query", sql, params)
+
+  fn execute(sql, params):
+    return: extension("night.data.execute", sql, params)
+
+  fn begin():
+    return: extension("night.data.begin")
+
+  fn commit():
+    return: extension("night.data.commit")
+
+  fn rollback():
+    return: extension("night.data.rollback")
+
+  fn healthy():
+    return: extension("night.data.health")
