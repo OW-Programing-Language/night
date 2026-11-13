@@ -15,6 +15,7 @@ import org.owlang.night.security.NightCredentialStore;
 import org.owlang.night.web.NightOpenApi;
 import org.owlang.night.mail.NightMail;
 import org.owlang.night.validation.NightObjectValidation;
+import org.owlang.night.jobs.NightScheduler;
 import org.owlang.night.security.NightIpQuota;
 
 import java.util.List;
@@ -31,6 +32,7 @@ public final class NightExtension implements RuntimeExtension {
     private final NightOpenApi openapi = new NightOpenApi();
     private final NightMail mail = new NightMail(jdbc);
     private final NightObjectValidation objectValidation = new NightObjectValidation();
+    private final NightScheduler scheduler = new NightScheduler(jdbc);
     private final NightRepository repository = new NightRepository(jdbc);
     private final NightOutbox outbox = new NightOutbox(jdbc);
     private final NightMetrics metrics = new NightMetrics();
@@ -62,6 +64,27 @@ public final class NightExtension implements RuntimeExtension {
                 arity(operation, args, 1);
                 security.publicRoute(string(args, 0));
                 yield 1;
+            }
+            case "night.jobs.schedule" -> {
+                arity(operation, args, 5);
+                yield scheduler.schedule(string(args, 0), string(args, 1), string(args, 2),
+                        longValue(args, 3), integer(args, 4));
+            }
+            case "night.jobs.claim" -> {
+                arity(operation, args, 2);
+                yield scheduler.claim(string(args, 0), integer(args, 1));
+            }
+            case "night.jobs.ack" -> {
+                arity(operation, args, 2);
+                yield scheduler.acknowledge(string(args, 0), string(args, 1));
+            }
+            case "night.jobs.fail" -> {
+                arity(operation, args, 4);
+                yield scheduler.fail(string(args, 0), string(args, 1), integer(args, 2), integer(args, 3));
+            }
+            case "night.jobs.replay_dead" -> {
+                arity(operation, args, 1);
+                yield scheduler.replayDead(string(args, 0));
             }
             case "night.mail.send" -> {
                 arity(operation, args, 6);
@@ -260,6 +283,12 @@ public final class NightExtension implements RuntimeExtension {
         if (!(args.get(index) instanceof String text))
             throw new IllegalArgumentException("Expected a Night string argument");
         return text;
+    }
+
+    private static long longValue(List<?> args, int index) {
+        if (!(args.get(index) instanceof Number number))
+            throw new IllegalArgumentException("Expected a Night numeric argument");
+        return number.longValue();
     }
 
     private static int integer(List<?> args, int index) {
