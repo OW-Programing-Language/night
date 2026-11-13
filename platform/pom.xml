@@ -13,6 +13,11 @@
   </properties>
   <dependencies>
     <dependency>
+      <groupId>org.mindrot</groupId>
+      <artifactId>jbcrypt</artifactId>
+      <version>0.4</version>
+    </dependency>
+    <dependency>
       <groupId>dev.oreo</groupId>
       <artifactId>OwCompiler</artifactId>
       <version>1.0-SNAPSHOT</version>
