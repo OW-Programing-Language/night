@@ -1,0 +1,29 @@
+[Unit]
+Description=Night OW production example (experimental)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=night
+Group=night
+WorkingDirectory=/opt/night
+Environment=OW_NO_BROWSER=1
+EnvironmentFile=/etc/night/night.env
+ExecStart=/usr/bin/java -cp /opt/night/ow-lang/target/OwIDE.jar:/opt/night/platform/target/night-platform-0.2.0-SNAPSHOT.jar dev.oreo.Main run /opt/night/examples/production/main.ow
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=20s
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryMax=1G
+TasksMax=256
+LimitNOFILE=8192
+
+[Install]
+WantedBy=multi-user.target
