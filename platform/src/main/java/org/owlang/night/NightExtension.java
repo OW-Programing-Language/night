@@ -12,6 +12,7 @@ import org.owlang.night.http.NightHttpClient;
 import org.owlang.night.data.NightOutbox;
 import org.owlang.night.security.BearerSecurity;
 import org.owlang.night.security.NightCredentialStore;
+import org.owlang.night.web.NightOpenApi;
 import org.owlang.night.security.NightIpQuota;
 
 import java.util.List;
@@ -25,6 +26,7 @@ public final class NightExtension implements RuntimeExtension {
     private final NightIpQuota quota = NightIpQuota.fromEnvironment();
     private final NightJdbc jdbc = new NightJdbc();
     private final NightCredentialStore credentials = new NightCredentialStore(jdbc);
+    private final NightOpenApi openapi = new NightOpenApi();
     private final NightRepository repository = new NightRepository(jdbc);
     private final NightOutbox outbox = new NightOutbox(jdbc);
     private final NightMetrics metrics = new NightMetrics();
@@ -56,6 +58,14 @@ public final class NightExtension implements RuntimeExtension {
                 arity(operation, args, 1);
                 security.publicRoute(string(args, 0));
                 yield 1;
+            }
+            case "night.openapi.register" -> {
+                arity(operation, args, 4);
+                yield openapi.register(string(args, 0), string(args, 1), string(args, 2), integer(args, 3));
+            }
+            case "night.openapi.spec" -> {
+                arity(operation, args, 2);
+                yield openapi.spec(string(args, 0), string(args, 1));
             }
             case "night.credentials.register" -> {
                 arity(operation, args, 2);
