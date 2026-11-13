@@ -16,3 +16,7 @@ class NightOutbox:
 
   fn fail(event_id, worker, retry_seconds, max_attempts):
     return: extension("night.outbox.fail", event_id, worker, retry_seconds, max_attempts)
+
+  # Operator-only recovery action; restrict calls using your route/service authorization.
+  fn replay_dead(event_id):
+    return: extension("night.outbox.replay_dead", event_id)
