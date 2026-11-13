@@ -66,7 +66,19 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
+      NIGHT_REDIS_URL: redis://127.0.0.1:6379
+      NIGHT_REDIS_ALLOW_INSECURE_LOOPBACK: "true"
+      NIGHT_REDIS_NAMESPACE: night_ci
       NIGHT_JDBC_URL: jdbc:postgresql://localhost:5432/night
       NIGHT_JDBC_USER: night_test
       NIGHT_JDBC_PASSWORD: night_test_ci_only
@@ -88,4 +100,4 @@ jobs:
       - name: Install OW extension SPI
         run: mvn -B -q -f ow-lang/pom.xml install
       - name: Verify JDBC transaction and rollback behavior on PostgreSQL
-        run: mvn -B -f platform/pom.xml -Dtest=NightIsolationTest,NightRepositoryTest,NightOutboxTest test
+        run: mvn -B -f platform/pom.xml -Dtest=NightIsolationTest,NightRepositoryTest,NightOutboxTest,NightRedisTest test
