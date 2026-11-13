@@ -20,6 +20,9 @@ or Java libraries run unchanged inside OW.
 | `night-data-redis` | Spring Data Redis | Shared Redis string cache with TLS, TTL and namespace prefixes | No pub/sub, tenant isolation, Redis Streams or failover tests |
 | `night-http-client` | RestClient / WebClient | Allowlisted outbound HTTPS GET, timeouts, body limits, non-following redirects, bounded retry | DNS rebinding not fully blocked; production egress gateway required |
 | `night-outbox` | Transactional outbox pattern | PostgreSQL leases, dead-letter state and explicit replay | No broker worker or Kafka/RabbitMQ transport |
+| `night-credentials` | Spring Security PasswordEncoder/UserDetails | JDBC-backed bcrypt passwords, 5-attempt lockout and one-time reset primitives | No public anti-enumeration reset service, session invalidation, MFA or completed IdP integration |
+| `night-openapi` | springdoc-openapi | Explicit route metadata and OpenAPI 3.0 spec generation | No schema introspection, typed request/response contracts or GraphQL |
+| `night-mail` | Spring Mail | SMTP STARTTLS/SMTPS with plain-text templates and audit table | No live SMTP integration/queue/bounce handling; handoff is not delivery |
 | `night-validation` | Bean Validation | Required and string-length guards | No full Jakarta Bean Validation metadata engine |
 | `night-test` | Spring Boot Test | Java unit tests, OW type preflight, live auth/SQL/HTTP tests | Integration coverage, not formal verification |
 
@@ -32,12 +35,12 @@ or Java libraries run unchanged inside OW.
 | `night-data-redis-streams` | Spring Data Redis | Streams/pub-sub, consumer-group semantics, cross-node invalidation, cluster recovery |
 | `night-messaging` | Spring AMQP / Kafka | Durable retry/outbox, consumer groups, dead-letter handling |
 | `night-scheduling` | Spring Task / Quartz | Scheduler persistence, safe OW callbacks, distributed lease management |
-| `night-mail` | Spring Mail | SMTP provider, TLS, delivery tracing, template mailer |
+| `night-mail-delivery` | Spring Mail | Durable retries, live provider TLS testing, bounce/delivery webhooks, template HTML escaping |
 | `night-graphql` | Spring GraphQL | Query parser, validation, resolvers, auth boundaries |
 | `night-realtime` | Spring WebSocket | WebSocket and SSE, back-pressure, authenticated subscriptions |
 | `night-reactive` | WebFlux | Async OW runtime, structured cancellation, nonblocking transport |
 | `night-http-client-full` | Spring WebClient | Async streaming/HTTP2, DNS pinning, egress SSRF controls, tracing and circuit breaker failure testing |
-| `night-openapi` | springdoc | Schema extraction and OpenAPI generation |
+| `night-openapi-schema` | springdoc | Typed request/response schema introspection and automatic route discovery |
 | `night-batch` | Spring Batch | Checkpointed jobs, retry, restartability |
 | `night-observability-otel` | Micrometer / OpenTelemetry | Tracing, context propagation, collector exporter |
 | `night-resilience` | Spring Retry / Resilience4j | Circuit breaking, bulkheads, timeout policies |
