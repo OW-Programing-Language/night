@@ -7,6 +7,7 @@ import org.owlang.night.actuator.NightMetrics;
 import org.owlang.night.cache.NightCache;
 import org.owlang.night.data.NightJdbc;
 import org.owlang.night.data.NightRepository;
+import org.owlang.night.data.NightRedis;
 import org.owlang.night.http.NightHttpClient;
 import org.owlang.night.data.NightOutbox;
 import org.owlang.night.security.BearerSecurity;
@@ -26,6 +27,7 @@ public final class NightExtension implements RuntimeExtension {
     private final NightOutbox outbox = new NightOutbox(jdbc);
     private final NightMetrics metrics = new NightMetrics();
     private final NightCache cache = new NightCache();
+    private final NightRedis redis = new NightRedis();
     private volatile NightHttpClient outboundHttp;
 
     private NightHttpClient outboundHttp() {
@@ -147,6 +149,26 @@ public final class NightExtension implements RuntimeExtension {
                 arity(operation, args, 0);
                 yield metrics.snapshot();
             }
+            case "night.redis.open" -> {
+                arity(operation, args, 0);
+                yield redis.open();
+            }
+            case "night.redis.put" -> {
+                arity(operation, args, 3);
+                yield redis.put(string(args, 0), string(args, 1), integer(args, 2));
+            }
+            case "night.redis.get" -> {
+                arity(operation, args, 1);
+                yield redis.get(string(args, 0));
+            }
+            case "night.redis.evict" -> {
+                arity(operation, args, 1);
+                yield redis.evict(string(args, 0));
+            }
+            case "night.redis.health" -> {
+                arity(operation, args, 0);
+                yield redis.health();
+            }
             case "night.cache.put" -> {
                 arity(operation, args, 3);
                 yield cache.put(string(args, 0), args.get(1), integer(args, 2));
@@ -229,5 +251,8 @@ public final class NightExtension implements RuntimeExtension {
         }
     }
 
-    @Override public void close() { jdbc.close(); }
+    @Override public void close() {
+        try { redis.close(); }
+        finally { jdbc.close(); }
+    }
 }
