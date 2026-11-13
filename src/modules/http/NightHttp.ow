@@ -1,0 +1,10 @@
+# Outbound HTTPS client with operator-pinned DNS hostname allowlist.
+# Requires NIGHT_HTTP_ALLOWED_HOSTS=api.example.com,other.example.com
+# Never accept arbitrary user-provided URLs; validate application intent first.
+class NightHttp:
+  fn new():
+    return: 0
+
+  # Returns {status, body}; text body limited to 1 MiB, GET only.
+  fn get(url):
+    return: extension("night.http.get", url)
