@@ -77,7 +77,7 @@ public final class NightRedis implements AutoCloseable {
     }
 
     public int evict(String key) {
-        return ready().del(fullKey(key)).intValue();
+        return (int) ready().del(fullKey(key));
     }
 
     public int health() {
