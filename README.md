@@ -98,9 +98,10 @@ security and JDBC rather than unsecured application-level helper stubs.
 Night 0.2 is a **production-oriented foundation and integration-tested
 candidate**, **not** a production-certified replacement for Spring Boot.
 The OW HTTP server remains single-worker and requires a reverse proxy for
-TLS, timeouts and rate limiting. JWT RS256 resource verification, a PostgreSQL
-outbox and a Redis cache starter are experimental increments; they are **not**
-full OAuth2/OIDC, Spring Data, durable broker integration or 1.0 readiness.
-The deployment manifests and expanded CI still require successful validation.
+TLS, timeouts and rate limiting. JWT RS256, bcrypt credentials, OpenAPI metadata,
+SMTP handoff, a PostgreSQL outbox/scheduler, Redis caching and a RabbitMQ
+queue adapter are experimental increments; they are **not** full OAuth2/OIDC,
+Spring Data, Kafka/Streams interoperability, Quartz callback parity or 1.0
+readiness. End-to-end deployment tests and an independent audit remain outstanding.
 
 [MIT License](LICENSE).
