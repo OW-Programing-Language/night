@@ -8,3 +8,7 @@ class NightValidation:
 
   fn max_length(value, limit):
     return: extension("night.validation.max_length", value, limit)
+
+  # Declarative rules: [[field, type, required_0_or_1, max]], unknown fields denied.
+  fn object(value, rules):
+    return: extension("night.validation.object", value, rules)
