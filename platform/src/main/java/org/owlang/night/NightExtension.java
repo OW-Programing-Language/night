@@ -7,6 +7,7 @@ import org.owlang.night.actuator.NightMetrics;
 import org.owlang.night.cache.NightCache;
 import org.owlang.night.data.NightJdbc;
 import org.owlang.night.security.BearerSecurity;
+import org.owlang.night.security.NightIpQuota;
 
 import java.util.List;
 
@@ -16,6 +17,7 @@ import java.util.List;
  */
 public final class NightExtension implements RuntimeExtension {
     private final BearerSecurity security = new BearerSecurity();
+    private final NightIpQuota quota = NightIpQuota.fromEnvironment();
     private final NightJdbc jdbc = new NightJdbc();
     private final NightMetrics metrics = new NightMetrics();
     private final NightCache cache = new NightCache();
@@ -158,7 +160,9 @@ public final class NightExtension implements RuntimeExtension {
     }
 
     @Override public Response beforeRequest(HttpExchange exchange) {
-        return security.before(exchange);
+        Response result = security.before(exchange);
+        if (result != null) return result;
+        return quota == null ? null : quota.before(exchange);
     }
 
     @Override public void afterRequest(HttpExchange exchange, int status, long elapsedNanos) {
