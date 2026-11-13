@@ -7,6 +7,7 @@ import "../../src/NightApp.ow"
 import "../../src/modules/security/NightSecurity.ow"
 import "../../src/modules/data/NightData.ow"
 import "../../src/modules/actuator/NightActuator.ow"
+import "../../src/modules/web/NightOpenApi.ow"
 import "catalog/api/CatalogApi.ow"
 import "catalog/infra/Catalog.ow"
 import "purchases/api/PurchasesApi.ow"
@@ -19,6 +20,7 @@ main:
   call: security.role("GET /_night/metrics", "ADMIN")
   call: security.role("GET /_night/prometheus", "ADMIN")
   call: security.role("GET /_night/ready", "ADMIN")
+  call: security.role("GET /_night/openapi", "ADMIN")
   call: security.role("POST /api/purchases/:item", "WRITER")
   # Fail fast at startup if no configured bearer credentials.
   call: security.enable()
@@ -37,5 +39,13 @@ main:
   set actuator: new NightActuator()
   call: night.mount_system()
   call: actuator.mount()
+  set docs: new NightOpenApi()
+  call: docs.register("GET", "/_night/health", "Liveness probe", 0)
+  call: docs.register("GET", "/_night/ready", "Readiness probe", 1)
+  call: docs.register("GET", "/api/catalog", "List catalog", 1)
+  call: docs.register("GET", "/api/purchases", "List purchases", 1)
+  call: docs.register("GET", "/api/purchases/:id", "Purchase by ID", 1)
+  call: docs.register("POST", "/api/purchases/:item", "Create purchase", 1)
+  call: docs.mount()
   print: "Night platform ready on http://localhost:8080"
   serve: 8080
