@@ -17,6 +17,13 @@ class NightData:
   fn execute(sql, params):
     return: extension("night.data.execute", sql, params)
 
+  # Only use literal, trusted schema identifiers: never HTTP input.
+  fn page(table, order_column, limit, offset):
+    return: extension("night.data.page", table, order_column, limit, offset)
+
+  fn update_versioned(table, id_column, value_column, id, value, version):
+    return: extension("night.data.update_versioned", table, id_column, value_column, id, value, version)
+
   fn begin():
     return: extension("night.data.begin")
 
