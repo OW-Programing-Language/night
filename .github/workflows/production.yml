@@ -100,4 +100,6 @@ jobs:
       - name: Install OW extension SPI
         run: mvn -B -q -f ow-lang/pom.xml install
       - name: Verify JDBC transaction and rollback behavior on PostgreSQL
-        run: mvn -B -f platform/pom.xml -Dtest=NightIsolationTest,NightRepositoryTest,NightOutboxTest,NightRedisTest test
+        run: mvn -B -f platform/pom.xml -Dtest=NightIsolationTest,NightRepositoryTest,NightOutboxTest,NightRedisTest,NightCredentialStoreTest test
+      - name: Rehearse disposable PostgreSQL logical backup and restore
+        run: bash tests/postgres_restore.sh
