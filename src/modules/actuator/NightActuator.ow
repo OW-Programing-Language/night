@@ -8,6 +8,8 @@ class NightActuator:
   fn mount():
     route "GET /_night/metrics":
       respond: extension("night.actuator.metrics")
+    route "GET /_night/prometheus":
+      respond: extension("night.actuator.prometheus")
     route "GET /_night/ready":
       if: extension("night.data.health") == 0
         respond: response(503, {status: "DOWN", database: "DOWN"})
