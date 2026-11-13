@@ -35,7 +35,13 @@ def request(path, method="GET", token=None, payload=None):
 def expect(path, status, *, token=None, method="GET", payload=None):
     code, raw, headers = request(path, method, token, payload)
     assert code == status, (path, code, status, raw)
-    return json.loads(raw) if raw else {}
+    if not raw:
+        return {}
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        # OW deliberately sends plaintext for transport-level 413/500.
+        return {"raw": raw}
 
 def main():
     assert OW.exists(), "Missing OW build"
