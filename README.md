@@ -91,6 +91,7 @@ security and JDBC rather than unsecured application-level helper stubs.
 [Credential store](docs/credentials.md) · [OpenAPI](docs/openapi.md) · [SMTP Mail](docs/mail.md) ·
 [Scheduler](docs/scheduler.md) · [RabbitMQ](docs/rabbitmq.md) · [Validation](docs/validation.md) ·
 [Security/Data increments](docs/incremental-production.md) ·
+[Upgrade/rollback policy](docs/upgrade-policy.md) ·
 [OW starter guide](docs/guide.md)
 
 ## Operational status
