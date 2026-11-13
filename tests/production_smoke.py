@@ -84,6 +84,11 @@ def main():
                 expect("/api/purchases", 401)
                 expect("/api/purchases", 401, token="invalid-token")
                 expect("/api/purchases", 200, token=tokens["READER"])
+                expect("/_night/openapi", 401)
+                expect("/_night/openapi", 403, token=tokens["READER"])
+                spec = expect("/_night/openapi", 200, token=tokens["ADMIN"])
+                assert spec["openapi"] == "3.0.3", spec
+                assert "/api/purchases/{id}" in spec["paths"], spec
                 expect("/_night/metrics", 401)
                 expect("/_night/prometheus", 401)
                 expect("/_night/prometheus", 403, token=tokens["READER"])
