@@ -43,7 +43,7 @@ jobs:
             -e NIGHT_DOMAIN=night.example.org \
             -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
             caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
       - name: Parse Kubernetes multi-document manifests

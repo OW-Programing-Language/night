@@ -27,7 +27,7 @@ jobs:
           cache-dependency-path: |
             ow-lang/pom.xml
             platform/pom.xml
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
       - name: Build and install OW with the extension SPI
