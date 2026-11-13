@@ -16,7 +16,7 @@ jobs:
           path: ow-lang
           # Known OW runtime with native module/functor signatures and HTTP.
           ref: 232e3bd1d41d7b69850b7bb8c2f193e242043876
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
