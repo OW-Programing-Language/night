@@ -1,0 +1,23 @@
+# Durable PostgreSQL job scheduler. No arbitrary callback execution.
+# App workers explicitly claim jobs and dispatch allowlisted task names
+# to their OWN trusted OW functions. Jobs may execute at least once.
+class NightScheduler:
+  fn new():
+    return: 0
+
+  # first_run_ms is epoch milliseconds; every_seconds=0 means run once.
+  fn schedule(job_id, task_name, payload, first_run_ms, every_seconds):
+    return: extension("night.jobs.schedule", job_id, task_name, payload, first_run_ms, every_seconds)
+
+  fn claim(worker, lease_seconds):
+    return: extension("night.jobs.claim", worker, lease_seconds)
+
+  fn acknowledge(job_id, worker):
+    return: extension("night.jobs.ack", job_id, worker)
+
+  fn fail(job_id, worker, retry_seconds, max_attempts):
+    return: extension("night.jobs.fail", job_id, worker, retry_seconds, max_attempts)
+
+  # Operator-only recovery action; never expose on an unprotected public endpoint.
+  fn replay_dead(job_id):
+    return: extension("night.jobs.replay_dead", job_id)
