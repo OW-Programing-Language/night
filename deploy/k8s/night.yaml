@@ -1,0 +1,127 @@
+# Experimental templates. Replace image and TLS host; create night-runtime Secret
+# outside Git and configure an actual PostgreSQL service.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: night
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: night
+  template:
+    metadata:
+      labels:
+        app: night
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: night
+          image: registry.example.invalid/night:replace-me
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: OW_NO_BROWSER
+              value: "1"
+            - name: NIGHT_JDBC_URL
+              valueFrom:
+                secretKeyRef:
+                  name: night-runtime
+                  key: jdbc-url
+            - name: NIGHT_JDBC_USER
+              valueFrom:
+                secretKeyRef:
+                  name: night-runtime
+                  key: jdbc-user
+            - name: NIGHT_JDBC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: night-runtime
+                  key: jdbc-password
+            - name: NIGHT_BEARER_KEYS
+              valueFrom:
+                secretKeyRef:
+                  name: night-runtime
+                  key: bearer-keys
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 768Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: temp
+              mountPath: /tmp
+          startupProbe:
+            httpGet:
+              path: /_night/health
+              port: http
+            failureThreshold: 24
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /_night/health
+              port: http
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /_night/health
+              port: http
+            periodSeconds: 5
+          terminationMessagePolicy: FallbackToLogsOnError
+      volumes:
+        - name: temp
+          emptyDir:
+            sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: night
+  namespace: default
+spec:
+  selector:
+    app: night
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: night
+  namespace: default
+spec:
+  tls:
+    - hosts:
+        - night.example.invalid
+      secretName: night-tls
+  rules:
+    - host: night.example.invalid
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: night
+                port:
+                  name: http
