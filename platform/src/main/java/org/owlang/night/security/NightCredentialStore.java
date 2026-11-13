@@ -67,7 +67,7 @@ public final class NightCredentialStore {
         validateUsername(username);
         if (password == null || password.length() > 1024) return 0;
         var matches = jdbc.query("""
-                SELECT password_hash, locked_until FROM night_credentials WHERE username = ?
+                SELECT password_hash AS "password_hash", locked_until AS "locked_until" FROM night_credentials WHERE username = ?
                 """, List.of(username));
         if (matches.isEmpty()) {
             BCrypt.checkpw(password, DUMMY);
