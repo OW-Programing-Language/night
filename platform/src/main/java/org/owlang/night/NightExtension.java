@@ -6,6 +6,7 @@ import dev.oreo.RuntimeExtension;
 import org.owlang.night.actuator.NightMetrics;
 import org.owlang.night.cache.NightCache;
 import org.owlang.night.data.NightJdbc;
+import org.owlang.night.data.NightRepository;
 import org.owlang.night.security.BearerSecurity;
 import org.owlang.night.security.NightIpQuota;
 
@@ -19,6 +20,7 @@ public final class NightExtension implements RuntimeExtension {
     private final BearerSecurity security = new BearerSecurity();
     private final NightIpQuota quota = NightIpQuota.fromEnvironment();
     private final NightJdbc jdbc = new NightJdbc();
+    private final NightRepository repository = new NightRepository(jdbc);
     private final NightMetrics metrics = new NightMetrics();
     private final NightCache cache = new NightCache();
 
@@ -70,6 +72,15 @@ public final class NightExtension implements RuntimeExtension {
             case "night.data.execute" -> {
                 arity(operation, args, 2);
                 yield jdbc.execute(string(args, 0), list(args, 1));
+            }
+            case "night.data.page" -> {
+                arity(operation, args, 4);
+                yield repository.page(string(args, 0), string(args, 1), integer(args, 2), integer(args, 3));
+            }
+            case "night.data.update_versioned" -> {
+                arity(operation, args, 6);
+                yield repository.updateVersioned(string(args, 0), string(args, 1),
+                        string(args, 2), args.get(3), args.get(4), integer(args, 5));
             }
             case "night.data.begin" -> {
                 arity(operation, args, 0);
