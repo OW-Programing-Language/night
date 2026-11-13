@@ -12,11 +12,13 @@ It does **not** run Spring Boot or require Java/Spring APIs in OW source.
 |---|---|---|
 | Night Core | Native module/functor lifecycle, dependency checks, rollback, events | `src/NightApp.ow` |
 | Night Web | Built-in OW HTTP and REST route handlers | OW runtime + Night module controllers |
-| Night Security | Bearer auth, RBAC per route, secure headers, pre-controller filter | `src/modules/security/` |
-| Night Data | JDBC, HikariCP, PostgreSQL/H2, prepared statements, Flyway migrations, transactions | `src/modules/data/` + `platform/` |
+| Night Security | Bearer auth, experimental RS256/JWKS JWT resource server, RBAC per route, secure headers | `src/modules/security/` |
+| Night Data | JDBC, HikariCP, PostgreSQL/H2, Flyway, transactions, pagination, optimistic updates, PostgreSQL outbox | `src/modules/data/` + `platform/` |
 | Night Actuator | Health, readiness, HTTP metrics, module inspection | `src/modules/actuator/` |
 | Night Config | Environment configuration | `src/modules/config/` |
 | Night Cache | Local TTL cache | `src/modules/cache/` |
+| Night Redis | Shared string cache, TTL and key prefix isolation (TLS Redis) | `src/modules/data/NightRedis.ow` + `platform/` |
+| Night HTTP | Allowlisted outbound HTTPS GET, bounded response and circuit breaker | `src/modules/http/` + `platform/` |
 | Night Validation | Input guards | `src/modules/validation/` |
 | Night Test | Compiler checks, lifecycle tests, secured HTTP+SQL tests | `tests/` + GitHub Actions |
 
@@ -81,6 +83,8 @@ security and JDBC rather than unsecured application-level helper stubs.
 [Spring module feature matrix](docs/starters.md) · [Full Spring-inspired ecosystem architecture](docs/spring-ecosystem.md) ·
 [Modulith architecture](docs/modules.md) ·
 [Bookstore example](examples/bookstore/README.md) ·
+[Deployment templates](docs/deployment.md) · [Redis cache](docs/redis.md) ·
+[Security/Data increments](docs/incremental-production.md) ·
 [OW starter guide](docs/guide.md)
 
 ## Operational status
@@ -88,8 +92,9 @@ security and JDBC rather than unsecured application-level helper stubs.
 Night 0.2 is a **production-oriented foundation and integration-tested
 candidate**, **not** a production-certified replacement for Spring Boot.
 The OW HTTP server remains single-worker and requires a reverse proxy for
-TLS, timeouts and rate limiting. JWT/OAuth2/OIDC, ORM, durable messaging,
-distributed caching, broader observability and native deployment have not
-been implemented yet.
+TLS, timeouts and rate limiting. JWT RS256 resource verification, a PostgreSQL
+outbox and a Redis cache starter are experimental increments; they are **not**
+full OAuth2/OIDC, Spring Data, durable broker integration or 1.0 readiness.
+The deployment manifests and expanded CI still require successful validation.
 
 [MIT License](LICENSE).
