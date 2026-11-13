@@ -1,0 +1,70 @@
+# Example deployment only. Never commit a populated .env file.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: night
+      POSTGRES_USER: night
+      POSTGRES_PASSWORD: ${NIGHT_DB_PASSWORD:?Provide a PostgreSQL password in the environment}
+    volumes:
+      - night-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U night -d night"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks:
+      - internal
+
+  night:
+    build: .
+    restart: unless-stopped
+    environment:
+      OW_NO_BROWSER: "1"
+      NIGHT_JDBC_URL: jdbc:postgresql://postgres:5432/night
+      NIGHT_JDBC_USER: night
+      NIGHT_JDBC_PASSWORD: ${NIGHT_DB_PASSWORD:?Provide a PostgreSQL password}
+      NIGHT_BEARER_KEYS: ${NIGHT_BEARER_KEYS:?Provide role-to-SHA256 bearer credentials}
+      NIGHT_IP_QUOTA_PER_MINUTE: ${NIGHT_IP_QUOTA_PER_MINUTE:-600}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    pids_limit: 256
+    mem_limit: 512m
+    networks:
+      - internal
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      NIGHT_DOMAIN: ${NIGHT_DOMAIN:?Set a DNS hostname for HTTPS}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - night-caddy-data:/data
+      - night-caddy-config:/config
+    depends_on:
+      - night
+    networks:
+      - internal
+      - public
+
+volumes:
+  night-postgres:
+  night-caddy-data:
+  night-caddy-config:
+
+networks:
+  internal:
+    internal: true
+  public:
