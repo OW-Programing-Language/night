@@ -21,6 +21,8 @@ It does **not** run Spring Boot or require Java/Spring APIs in OW source.
 | Night HTTP | Allowlisted outbound HTTPS GET, bounded response and circuit breaker | `src/modules/http/` + `platform/` |
 | Night OpenAPI | Explicit route metadata registry and generated OpenAPI 3.0 document | `src/modules/web/NightOpenApi.ow` + `platform/` |
 | Night Mail | TLS-only SMTP text templates and JDBC handoff auditing | `src/modules/io/NightMail.ow` + `platform/` |
+| Night Scheduler | PostgreSQL one-shot/repeating jobs, leases, retry and dead-letter replay | `src/modules/jobs/NightScheduler.ow` + `platform/` |
+| Night RabbitMQ | TLS-only durable queue adapter, publisher confirms, manual ACKs | `src/modules/messaging/NightRabbitMQ.ow` + `platform/` |
 | Night Validation | Input guards | `src/modules/validation/` |
 | Night Test | Compiler checks, lifecycle tests, secured HTTP+SQL tests | `tests/` + GitHub Actions |
 
@@ -87,6 +89,7 @@ security and JDBC rather than unsecured application-level helper stubs.
 [Bookstore example](examples/bookstore/README.md) ·
 [Deployment templates](docs/deployment.md) · [Redis cache](docs/redis.md) ·
 [Credential store](docs/credentials.md) · [OpenAPI](docs/openapi.md) · [SMTP Mail](docs/mail.md) ·
+[Scheduler](docs/scheduler.md) · [RabbitMQ](docs/rabbitmq.md) · [Validation](docs/validation.md) ·
 [Security/Data increments](docs/incremental-production.md) ·
 [OW starter guide](docs/guide.md)
 
