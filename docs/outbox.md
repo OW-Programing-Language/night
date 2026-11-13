@@ -33,15 +33,16 @@ The claim API returns at most one event.
 - Atomic `SKIP LOCKED` leasing supports multiple polling workers.
 - Acknowledgement and failure actions require the current, unexpired lease owner.
 - Crash recovery makes an expired lease eligible for another worker.
-- Exhausted attempts enter `DEAD` state for operator inspection and replay planning.
+- Exhausted attempts enter `DEAD` state. An operator can explicitly call `replay_dead(event_id)` to make that same event ID eligible for redelivery, reset attempts, and clear any lease; delivered events are never replayed by this method.
 
 **At least once, not exactly once.** A worker can publish and crash before
 acknowledgement. Downstream handlers must deduplicate on event ID.
 
 ## Limitations blocking 1.0 completion
 
-- No built-in worker loop, broker adapter, schema registry, automated dead-letter
-  replay tooling or exponential-backoff/jitter policy yet.
+- No built-in worker loop, broker adapter, schema registry, automatic dead-letter
+  replay tooling or exponential-backoff/jitter policy yet. Manual `replay_dead`
+  exists; expose it only behind explicit administrator authorization.
 - The claim operation requires PostgreSQL and must not be invoked with H2.
 - Lease ownership is represented by worker name rather than a random fencing
   token; avoid sharing one worker ID between active processes.
