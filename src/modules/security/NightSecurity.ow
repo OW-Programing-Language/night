@@ -8,7 +8,7 @@ class NightSecurity:
   fn enable():
     return: extension("night.security.enable")
 
-  fn public(spec):
+  fn allow_public(spec):
     return: extension("night.security.public", spec)
 
   fn role(spec, role):
