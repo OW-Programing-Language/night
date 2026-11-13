@@ -1,0 +1,7 @@
+import "fixtures.ow"
+
+main:
+  set night: new NightApp()
+  call: night.use(new BaseTestModule())
+  call: night.use(new BaseTestModule())
+  print: "ERROR: duplicate module accepted"

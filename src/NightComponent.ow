@@ -1,0 +1,23 @@
+# Night v0.1 — public lifecycle contract for the module runtime.
+# Spring Modulith-inspired module boundaries, dependencies and events.
+# A negative start/register/mount result aborts boot.
+interface NightComponent:
+  fn name()
+  fn requires()
+  fn register(app)
+  fn start(app)
+  fn mount()
+  fn stop(app)
+  fn on_event(type, payload)
+  fn value()
+
+# Native OW module values satisfy this signature structurally.
+# Business signatures use: module_type CATALOG: include NIGHT_COMPONENT
+module_type NIGHT_COMPONENT:
+  fn name() -> string
+  fn requires() -> array
+  fn register() -> int
+  fn start() -> int
+  fn mount() -> int
+  fn stop() -> int
+  fn on_event(type string, payload int) -> int

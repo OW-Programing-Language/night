@@ -1,0 +1,291 @@
+import "NightComponent.ow"
+import "NightNativeAdapter.ow"
+
+# Night's composition root: module registry, dependency verification,
+# deterministic startup, rollback, event dispatch and HTTP route mounting.
+#
+# IMPORTANT: OW HTTP handlers do not capture lexical bindings. For module
+# handlers using the app, the main program must bind: set night: new NightApp()
+# Mounting registers OW native "route" handlers; "serve:" remains in main.
+class NightApp:
+  field modules
+  field names
+  field started
+  field enabled
+  field order
+  field count
+  field start_count
+  field booted
+  field attempted
+  field event_count
+  field last_event
+  field mounted
+
+  fn new():
+    set this.modules: array(64, 0)
+    set this.names: array(64, "")
+    set this.started: array(64, 0)
+    set this.enabled: array(64, 1)
+    set this.order: array(64, 0)
+    set this.count: 0
+    set this.start_count: 0
+    set this.booted: 0
+    set this.attempted: 0
+    set this.event_count: 0
+    set this.last_event: ""
+    set this.mounted: 0
+    return: 0
+
+  fn index_of(name):
+    set i int: 0
+    while: i < this.count
+      if: this.names[i] == name
+        return: i
+      set i: i + 1
+    return: 99
+
+  fn use(component):
+    call: assert(this.attempted == 0, "Night: cannot register modules after boot")
+    set checked NightComponent: component
+    call: assert(this.count < len(this.modules), "Night: module capacity reached (64)")
+    set key string: checked.name()
+    call: assert(key != "", "Night: module name must not be empty")
+    call: assert(this.index_of(key) == 99, "Night: duplicate module name " + key)
+    set values: this.modules
+    set labels: this.names
+    set states: this.started
+    set flags: this.enabled
+    set values[this.count]: checked
+    set labels[this.count]: key
+    set states[this.count]: 0
+    set flags[this.count]: 1
+    set this.count: this.count + 1
+    return: checked
+
+  fn use_native(source):
+    return: this.use_native_as(source, "NIGHT_COMPONENT")
+
+  fn use_native_as(source, contract):
+    set component: new NightNativeAdapter(source, contract)
+    call: this.use(component)
+    return: source
+
+  fn service(name):
+    set index int: this.index_of(name)
+    call: assert(index != 99, "Night: unknown module service " + name)
+    set component: this.modules[index]
+    return: component.value()
+
+  fn active_count():
+    return: this.start_count
+
+  fn is_active(name):
+    set index int: this.index_of(name)
+    if: index == 99
+      return: 0
+    return: this.started[index]
+
+  fn describe():
+    set result: array(this.count, 0)
+    set i int: 0
+    while: i < this.count
+      set result[i]: {name: this.names[i], started: this.started[i], enabled: this.enabled[i]}
+      set i: i + 1
+    return: result
+
+  # Every required service must resolve to a registered module.
+  # Import/package boundaries are additionally enforced by OW's loader
+  # (an api/infra sibling module cannot import another module's infra).
+  fn verify():
+    set ok int: 1
+    set i int: 0
+    while: i < this.count
+      set component: this.modules[i]
+      set deps: component.requires()
+      set j int: 0
+      while: j < len(deps)
+        set required: deps[j]
+        if: this.index_of(required) == 99
+          print: "Night: " + component.name() + " requires missing " + required
+          set ok: 0
+        if: required == component.name()
+          print: "Night: self-dependency in " + required
+          set ok: 0
+        set j: j + 1
+      set i: i + 1
+    return: ok
+
+  fn ready(index):
+    set component: this.modules[index]
+    set deps: component.requires()
+    set j int: 0
+    while: j < len(deps)
+      set dependency int: this.index_of(deps[j])
+      if: dependency == 99
+        return: 0
+      if: this.started[dependency] == 0
+        return: 0
+      set j: j + 1
+    return: 1
+
+  fn start_one(index):
+    if: this.started[index] == 1
+      return: 1
+    if: this.ready(index) == 0
+      return: 0
+    set component: this.modules[index]
+    set code int: component.start(this)
+    if: code < 0
+      print: "Night: start failed for " + component.name()
+      return: 0
+    set started: this.started
+    set order: this.order
+    set started[index]: 1
+    set order[this.start_count]: index
+    set this.start_count: this.start_count + 1
+    return: 1
+
+  fn boot():
+    if: this.attempted == 1
+      print: "Night: boot is one-shot, create a new NightApp to retry"
+      return: 0
+    set this.attempted: 1
+    if: this.verify() == 0
+      return: 0
+
+    set i int: 0
+    while: i < this.count
+      set component: this.modules[i]
+      if: component.register(this) < 0
+        print: "Night: registration failed for " + component.name()
+        return: 0
+      set i: i + 1
+
+    # Topological startup, independent of registration order.
+    while: this.start_count < this.count
+      set before int: this.start_count
+      set j int: 0
+      while: j < this.count
+        if: this.started[j] == 0
+          if: this.ready(j) == 1
+            if: this.start_one(j) == 0
+              call: this.stop()
+              print: "Night: startup rolled back"
+              return: 0
+        set j: j + 1
+      if: this.start_count == before
+        call: this.stop()
+        print: "Night: dependency cycle; startup rolled back"
+        return: 0
+
+    # Routes are mounted only AFTER all modules start successfully.
+    set k int: 0
+    while: k < this.start_count
+      set index int: this.order[k]
+      set component: this.modules[index]
+      if: component.mount() < 0
+        call: this.stop()
+        print: "Night: HTTP route mount failed for " + component.name()
+        return: 0
+      set k: k + 1
+
+    set this.booted: 1
+    print: "Night: booted " + this.start_count + " module(s)"
+    return: 1
+
+  fn stop():
+    # Reverse of successful dependency-ordered startup.
+    set i int: this.start_count
+    while: i > 0
+      set i: i - 1
+      set index int: this.order[i]
+      if: this.started[index] == 1
+        set component: this.modules[index]
+        call: component.stop(this)
+        set values: this.started
+        set values[index]: 0
+    set this.start_count: 0
+    set this.booted: 0
+    return: 1
+
+  # Dependent modules cannot be disabled while running.
+  fn disable(name):
+    if: this.booted == 0
+      return: 0
+    set index int: this.index_of(name)
+    if: index == 99
+      return: 0
+    set i int: 0
+    while: i < this.count
+      if: this.started[i] == 1
+        if: i != index
+          set consumer: this.modules[i]
+          set deps: consumer.requires()
+          set j int: 0
+          while: j < len(deps)
+            if: deps[j] == name
+              print: "Night: " + name + " is needed by " + consumer.name()
+              return: 0
+            set j: j + 1
+      set i: i + 1
+
+    set flags: this.enabled
+    set flags[index]: 0
+    if: this.started[index] == 1
+      set component: this.modules[index]
+      call: component.stop(this)
+      set states: this.started
+      set states[index]: 0
+      set position int: 0
+      set entries: this.order
+      while: position < this.start_count
+        if: entries[position] == index
+          set cursor int: position
+          while: cursor < this.start_count - 1
+            set entries[cursor]: entries[cursor + 1]
+            set cursor: cursor + 1
+          set this.start_count: this.start_count - 1
+          set position: this.start_count
+        else:
+          set position: position + 1
+    return: 1
+
+  fn enable(name):
+    if: this.booted == 0
+      return: 0
+    set index int: this.index_of(name)
+    if: index == 99
+      return: 0
+    if: this.enabled[index] == 1
+      return: 1
+    if: this.ready(index) == 0
+      return: 0
+    if: this.start_one(index) == 0
+      return: 0
+    set flags: this.enabled
+    set flags[index]: 1
+    return: 1
+
+  # In-process synchronous application events; subscribers must be active.
+  fn emit(type, payload):
+    set this.event_count: this.event_count + 1
+    set this.last_event: type
+    set i int: 0
+    while: i < this.count
+      if: this.enabled[i] == 1
+        if: this.started[i] == 1
+          set component: this.modules[i]
+          call: component.on_event(type, payload)
+      set i: i + 1
+    return: 1
+
+  # Requires main: set night: new NightApp() (handler lookup is global).
+  fn mount_system():
+    if: this.mounted == 1
+      return: 1
+    route "GET /_night/health":
+      respond: {framework: "Night", status: "UP", started: night.active_count(), events: night.event_count}
+    route "GET /_night/modules":
+      respond: night.describe()
+    set this.mounted: 1
+    return: 1

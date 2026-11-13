@@ -1,0 +1,12 @@
+import "../src/NightApp.ow"
+
+module_type WRONG:
+  fn name() -> string
+module Invalid: WRONG
+  fn name() -> string:
+    return: "broken"
+
+main:
+  set night: new NightApp()
+  call: night.use_native(Invalid)
+  print: "ERROR: invalid native module accepted"

@@ -1,0 +1,9 @@
+import "fixtures.ow"
+
+main:
+  set night: new NightApp()
+  call: night.use(new CycleATestModule())
+  call: night.use(new CycleBTestModule())
+  call: assert(night.boot() == 0, "cycle must be detected")
+  call: assert(night.start_count == 0, "nothing started during cycle")
+  print: "PASS Night cycle detection"

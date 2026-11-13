@@ -1,0 +1,10 @@
+import "fixtures.ow"
+
+main:
+  set night: new NightApp()
+  call: night.use(new FailingTestModule())
+  call: night.use(new BaseTestModule())
+  call: assert(night.boot() == 0, "failed start aborts boot")
+  call: assert(night.start_count == 0, "earlier modules rolled back")
+  call: assert(night.booted == 0, "boot failed")
+  print: "PASS Night rollback"

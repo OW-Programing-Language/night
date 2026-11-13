@@ -1,0 +1,5 @@
+# OW's built-in persistent table; JSON is written to OW_DB_PATH.
+model Purchase:
+  item int
+  quantity int
+  total int
