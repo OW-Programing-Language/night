@@ -1,0 +1,18 @@
+# PostgreSQL-backed application event outbox.
+# Call enqueue in the SAME transaction as the business write.
+# Worker must acknowledge only after its delivery target confirms processing.
+class NightOutbox:
+  fn new():
+    return: 0
+
+  fn enqueue(event_id, topic, payload):
+    return: extension("night.outbox.enqueue", event_id, topic, payload)
+
+  fn claim(worker, lease_seconds):
+    return: extension("night.outbox.claim", worker, lease_seconds)
+
+  fn acknowledge(event_id, worker):
+    return: extension("night.outbox.ack", event_id, worker)
+
+  fn fail(event_id, worker, retry_seconds, max_attempts):
+    return: extension("night.outbox.fail", event_id, worker, retry_seconds, max_attempts)
