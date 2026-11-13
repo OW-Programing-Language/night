@@ -1,6 +1,8 @@
 # Sample Night application image, not a certified production release.
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /workspace
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \\
+    && rm -rf /var/lib/apt/lists/*
 RUN git clone https://github.com/OW-Programing-Language/ow-lang.git ow-lang \
     && cd ow-lang \
     && git checkout 3be777a7ee2c9204ebe653d89e749e0dcfe4b831
