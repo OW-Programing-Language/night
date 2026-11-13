@@ -10,7 +10,7 @@ Set `NIGHT_IP_QUOTA_PER_MINUTE` to an integer from 1 to 1000000 before starting 
 export NIGHT_IP_QUOTA_PER_MINUTE=120
 ```
 
-The extension performs bearer authentication first and then permits at most that many **authorized/public requests** per TCP peer IP per 60-second fixed window. The quota returns HTTP 429 with JSON `{"error":"rate_limited"}`. A bounded table of up to 100000 peer addresses is used; when full, new peers are rejected until an expired entry can be removed.
+The extension counts **all requests, including invalid or missing authorization**, before expensive bearer/JWT verification and permits at most that many requests per TCP peer IP per 60-second fixed window. The quota returns HTTP 429 with JSON `{"error":"rate_limited"}`. A bounded table of up to 100000 peer addresses is used; when full, new peers are rejected until an expired entry can be removed.
 
 **Trust boundary:** `X-Forwarded-For`, `Forwarded`, and `X-Real-IP` are intentionally ignored. Behind a reverse proxy, the peer may be the proxy, so this is **not an end-user quota**. The proxy must enforce its own client-IP-aware rate limit and only trust forwarding headers from configured upstream proxies. This primitive does not provide distributed limits, request-cost accounting, or DoS protection. Roll out cautiously; a single-proxy deployment may share one bucket across all users.
 
