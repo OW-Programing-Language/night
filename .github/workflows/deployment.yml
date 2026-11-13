@@ -1,0 +1,68 @@
+name: Night deployment templates and image build
+
+on:
+  push:
+    paths:
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'compose.yaml'
+      - 'deploy/**'
+      - 'platform/**'
+      - 'src/**'
+      - 'examples/**'
+      - '.github/workflows/deployment.yml'
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'compose.yaml'
+      - 'deploy/**'
+      - 'platform/**'
+      - 'src/**'
+      - 'examples/**'
+      - '.github/workflows/deployment.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  templates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NIGHT_DOMAIN: night.example.org
+      NIGHT_DB_PASSWORD: example-only-not-for-production
+      NIGHT_BEARER_KEYS: 'ADMIN:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        run: docker compose -f compose.yaml config --quiet
+      - name: Validate Caddy HTTPS proxy configuration
+        run: |
+          docker run --rm \
+            -e NIGHT_DOMAIN=night.example.org \
+            -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Parse Kubernetes multi-document manifests
+        run: |
+          python3 -m pip install 'PyYAML==6.0.2'
+          python3 - <<'PY'
+          from pathlib import Path
+          import yaml
+          docs = list(yaml.safe_load_all(Path('deploy/k8s/night.yaml').read_text()))
+          assert len(docs) == 3
+          assert {d['kind'] for d in docs} == {'Deployment', 'Service', 'Ingress'}
+          assert all(d['apiVersion'] and d['metadata']['name'] for d in docs)
+          print('Validated', len(docs), 'Kubernetes resource YAML documents')
+          PY
+
+  image-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build non-root Night example image
+        run: docker build --pull --tag night:ci .
