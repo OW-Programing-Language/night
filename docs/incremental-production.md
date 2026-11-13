@@ -30,6 +30,14 @@ set changed: db.update_versioned("purchases", "id", "quantity", 42, 3, 0)
 - **Important:** Table and column names must originate in trusted source code/schema constants, **never** from request parameters. SQL identifiers cannot be parameter-bound. The helper rejects identifier punctuation and arbitrary order clauses; it does not implement schema authorization.
 - It is a constrained JDBC helper, **not** a general-purpose ORM or typed repository compiler. Large offsets may be inefficient; keyset pagination remains future work.
 
+## Prometheus counter exporter
+
+`NightMetrics.prometheus()` generates Prometheus 0.0.4 text exposition with process-local totals for HTTP requests, 5xx responses, 401/403 responses, and aggregate request duration in seconds. This export intentionally has no unbounded labels.
+
+The example `NightActuator.mount()` now registers `GET /_night/prometheus`; the production example requires the `ADMIN` role. A live smoke test checks 401/403/200 authorization and counter output. The response format and integration still require successful end-to-end CI validation.
+
+This is a basic metrics exporter, **not** OpenTelemetry tracing, histograms, exemplar support, or distributed correlation. In a real Prometheus deployment protect scraping with private networking and dedicated scrape credentials; do not make the endpoint public.
+
 ## Validation status
 
 Unit/integration test sources were added for quota windows, memory bounds, malicious identifiers, paging, version conflicts, and database isolation. GitHub Actions uses H2 and a separate PostgreSQL 16 job. End-to-end CI results and external production deployment tests have **not** been verified in this update.
