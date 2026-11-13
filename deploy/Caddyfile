@@ -1,0 +1,26 @@
+{
+    email {$NIGHT_ACME_EMAIL:off}
+}
+
+{$NIGHT_DOMAIN} {
+    encode zstd gzip
+
+    request_body {
+        max_size 1MB
+    }
+
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        Strict-Transport-Security "max-age=31536000"
+        -Server
+    }
+
+    reverse_proxy night:8080 {
+        transport http {
+            dial_timeout 3s
+            response_header_timeout 10s
+        }
+    }
+}
