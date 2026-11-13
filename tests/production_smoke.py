@@ -85,6 +85,8 @@ def main():
                 expect("/api/purchases", 401, token="invalid-token")
                 expect("/api/purchases", 200, token=tokens["READER"])
                 expect("/_night/metrics", 401)
+                expect("/_night/prometheus", 401)
+                expect("/_night/prometheus", 403, token=tokens["READER"])
                 expect("/_night/metrics", 403, token=tokens["READER"])
                 expect("/api/purchases/1", 404, token=tokens["READER"])
                 expect("/api/purchases/1", 403, token=tokens["READER"], method="POST", payload="2")
@@ -99,6 +101,9 @@ def main():
                 assert len(rows) == 1 and rows[0]["total"] == 24, rows
                 assert expect("/api/purchases/1", 200, token=tokens["READER"])["total"] == 24
                 assert expect("/_night/ready", 200, token=tokens["ADMIN"])["database"] == "UP"
+                code, prom, _ = request("/_night/prometheus", token=tokens["ADMIN"])
+                assert code == 200, (code, prom)
+                assert "night_http_requests_total" in prom, prom
                 metrics = expect("/_night/metrics", 200, token=tokens["ADMIN"])
                 assert metrics["requests"] >= 12, metrics
                 assert metrics["access_denied"] >= 4, metrics
