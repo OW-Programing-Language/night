@@ -27,6 +27,13 @@ class NightOutboxTest {
             assertTrue(outbox.claim("worker-b", 30).isEmpty());
             var dead = jdbc.query("SELECT state FROM night_outbox WHERE event_id = ?", List.of(id));
             assertEquals("DEAD", dead.get(0).get("state"));
+            assertEquals(1, outbox.replayDead(id));
+            assertEquals(0, outbox.replayDead(id));
+            var replayed = outbox.claim("worker-replay", 30);
+            assertEquals(1, replayed.size());
+            assertEquals(id, replayed.get(0).get("event_id"));
+            assertEquals(1, outbox.acknowledge(id, "worker-replay"));
+            assertEquals(0, outbox.replayDead(id));
         }
     }
 }
