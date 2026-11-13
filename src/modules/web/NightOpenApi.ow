@@ -1,0 +1,18 @@
+# OpenAPI 3.0 metadata registry. Register your actual OW routes explicitly:
+# the current interpreter cannot infer handler parameter/response types.
+# Protect /_night/openapi with NightSecurity ADMIN before mounting this route.
+class NightOpenApi:
+  fn new():
+    return: 0
+
+  # authenticated=1 adds bearerAuth requirement, 0 documents a public route.
+  fn register(method, path, summary, authenticated):
+    return: extension("night.openapi.register", method, path, summary, authenticated)
+
+  fn spec(title, version):
+    return: extension("night.openapi.spec", title, version)
+
+  fn mount():
+    route "GET /_night/openapi":
+      respond: extension("night.openapi.spec", "Night API", "0.2.0")
+    return: 1
