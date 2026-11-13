@@ -78,7 +78,7 @@ security and JDBC rather than unsecured application-level helper stubs.
 ## Documentation
 
 [Production and security guide](docs/production.md) ·
-[Spring module feature matrix](docs/starters.md) ·
+[Spring module feature matrix](docs/starters.md) · [Full Spring-inspired ecosystem architecture](docs/spring-ecosystem.md) ·
 [Modulith architecture](docs/modules.md) ·
 [Bookstore example](examples/bookstore/README.md) ·
 [OW starter guide](docs/guide.md)
