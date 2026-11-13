@@ -7,6 +7,7 @@ import org.owlang.night.actuator.NightMetrics;
 import org.owlang.night.cache.NightCache;
 import org.owlang.night.data.NightJdbc;
 import org.owlang.night.data.NightRepository;
+import org.owlang.night.data.NightOutbox;
 import org.owlang.night.security.BearerSecurity;
 import org.owlang.night.security.NightIpQuota;
 
@@ -21,6 +22,7 @@ public final class NightExtension implements RuntimeExtension {
     private final NightIpQuota quota = NightIpQuota.fromEnvironment();
     private final NightJdbc jdbc = new NightJdbc();
     private final NightRepository repository = new NightRepository(jdbc);
+    private final NightOutbox outbox = new NightOutbox(jdbc);
     private final NightMetrics metrics = new NightMetrics();
     private final NightCache cache = new NightCache();
 
@@ -81,6 +83,22 @@ public final class NightExtension implements RuntimeExtension {
                 arity(operation, args, 6);
                 yield repository.updateVersioned(string(args, 0), string(args, 1),
                         string(args, 2), args.get(3), args.get(4), integer(args, 5));
+            }
+            case "night.outbox.enqueue" -> {
+                arity(operation, args, 3);
+                yield outbox.enqueue(string(args, 0), string(args, 1), string(args, 2));
+            }
+            case "night.outbox.claim" -> {
+                arity(operation, args, 2);
+                yield outbox.claim(string(args, 0), integer(args, 1));
+            }
+            case "night.outbox.ack" -> {
+                arity(operation, args, 2);
+                yield outbox.acknowledge(string(args, 0), string(args, 1));
+            }
+            case "night.outbox.fail" -> {
+                arity(operation, args, 4);
+                yield outbox.fail(string(args, 0), string(args, 1), integer(args, 2), integer(args, 3));
             }
             case "night.data.begin" -> {
                 arity(operation, args, 0);
