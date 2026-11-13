@@ -77,4 +77,17 @@ public final class NightOutbox {
                   AND lease_until >= CURRENT_TIMESTAMP
                 """, List.of(maxAttempts, retrySeconds, eventId, worker));
     }
+    /**
+     * Explicit operator-controlled dead-letter replay. Never automatically
+     * replays delivered messages; preserves the stable event ID.
+     */
+    public int replayDead(String eventId) {
+        validate(eventId, 80, "event ID");
+        return jdbc.execute("""
+                UPDATE night_outbox
+                SET state = 'PENDING', attempts = 0, available_at = CURRENT_TIMESTAMP,
+                    lease_owner = NULL, lease_until = NULL
+                WHERE event_id = ? AND state = 'DEAD'
+                """, List.of(eventId));
+    }
 }
