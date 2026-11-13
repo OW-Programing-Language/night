@@ -193,9 +193,12 @@ public final class NightExtension implements RuntimeExtension {
     }
 
     @Override public Response beforeRequest(HttpExchange exchange) {
-        Response result = security.before(exchange);
-        if (result != null) return result;
-        return quota == null ? null : quota.before(exchange);
+        // Throttle authentication failures as well as accepted requests.
+        if (quota != null) {
+            Response throttled = quota.before(exchange);
+            if (throttled != null) return throttled;
+        }
+        return security.before(exchange);
     }
 
     @Override public void afterRequest(HttpExchange exchange, int status, long elapsedNanos) {
