@@ -1,0 +1,20 @@
+# Distributed string cache backed by Redis; not a replacement for NightCache.
+# Requires NIGHT_REDIS_URL=rediss://... and optional NIGHT_REDIS_NAMESPACE.
+class NightRedis:
+  fn new():
+    return: 0
+
+  fn open():
+    return: extension("night.redis.open")
+
+  fn put(key, value, ttl_seconds):
+    return: extension("night.redis.put", key, value, ttl_seconds)
+
+  fn get(key):
+    return: extension("night.redis.get", key)
+
+  fn evict(key):
+    return: extension("night.redis.evict", key)
+
+  fn healthy():
+    return: extension("night.redis.health")
