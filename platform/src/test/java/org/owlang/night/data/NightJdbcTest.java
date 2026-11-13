@@ -10,20 +10,20 @@ class NightJdbcTest {
         Assumptions.assumeTrue(System.getenv("NIGHT_JDBC_URL") != null);
         try (NightJdbc jdbc = new NightJdbc()) {
             assertEquals(1, jdbc.open());
-            jdbc.execute("CREATE TABLE IF NOT EXISTS night_test(id INT PRIMARY KEY, value INT)", List.of());
+            jdbc.execute("CREATE TABLE IF NOT EXISTS night_test(id INT PRIMARY KEY, payload INT)", List.of());
             jdbc.execute("DELETE FROM night_test", List.of());
 
             jdbc.begin();
-            jdbc.execute("INSERT INTO night_test(id, value) VALUES (?, ?)", List.of(1, 99));
+            jdbc.execute("INSERT INTO night_test(id, payload) VALUES (?, ?)", List.of(1, 99));
             jdbc.rollback();
             assertEquals(0, jdbc.query("SELECT * FROM night_test", List.of()).size());
 
             jdbc.begin();
-            jdbc.execute("INSERT INTO night_test(id, value) VALUES (?, ?)", List.of(2, 100));
+            jdbc.execute("INSERT INTO night_test(id, payload) VALUES (?, ?)", List.of(2, 100));
             jdbc.commit();
             assertEquals(1, jdbc.query("SELECT * FROM night_test", List.of()).size());
-            assertEquals(100, jdbc.query("SELECT value FROM night_test WHERE id = ?",
-                    List.of(2)).get(0).get("VALUE"));
+            assertEquals(100, jdbc.query("SELECT payload FROM night_test WHERE id = ?",
+                    List.of(2)).get(0).get("PAYLOAD"));
         }
     }
 
