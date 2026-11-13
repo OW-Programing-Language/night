@@ -17,6 +17,7 @@ main:
   call: security.allow_public("GET /_night/health")
   call: security.role("GET /_night/modules", "ADMIN")
   call: security.role("GET /_night/metrics", "ADMIN")
+  call: security.role("GET /_night/prometheus", "ADMIN")
   call: security.role("GET /_night/ready", "ADMIN")
   call: security.role("POST /api/purchases/:item", "WRITER")
   # Fail fast at startup if no configured bearer credentials.
