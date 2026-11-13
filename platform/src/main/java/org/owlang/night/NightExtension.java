@@ -16,6 +16,7 @@ import org.owlang.night.web.NightOpenApi;
 import org.owlang.night.mail.NightMail;
 import org.owlang.night.validation.NightObjectValidation;
 import org.owlang.night.jobs.NightScheduler;
+import org.owlang.night.messaging.NightRabbitMQ;
 import org.owlang.night.security.NightIpQuota;
 
 import java.util.List;
@@ -33,6 +34,7 @@ public final class NightExtension implements RuntimeExtension {
     private final NightMail mail = new NightMail(jdbc);
     private final NightObjectValidation objectValidation = new NightObjectValidation();
     private final NightScheduler scheduler = new NightScheduler(jdbc);
+    private final NightRabbitMQ rabbitmq = new NightRabbitMQ();
     private final NightRepository repository = new NightRepository(jdbc);
     private final NightOutbox outbox = new NightOutbox(jdbc);
     private final NightMetrics metrics = new NightMetrics();
@@ -64,6 +66,26 @@ public final class NightExtension implements RuntimeExtension {
                 arity(operation, args, 1);
                 security.publicRoute(string(args, 0));
                 yield 1;
+            }
+            case "night.rabbitmq.open" -> {
+                arity(operation, args, 0);
+                yield rabbitmq.open();
+            }
+            case "night.rabbitmq.publish" -> {
+                arity(operation, args, 2);
+                yield rabbitmq.publish(string(args, 0), string(args, 1));
+            }
+            case "night.rabbitmq.poll" -> {
+                arity(operation, args, 0);
+                yield rabbitmq.poll();
+            }
+            case "night.rabbitmq.ack" -> {
+                arity(operation, args, 1);
+                yield rabbitmq.ack(longValue(args, 0));
+            }
+            case "night.rabbitmq.reject" -> {
+                arity(operation, args, 2);
+                yield rabbitmq.reject(longValue(args, 0), integer(args, 1) == 1);
             }
             case "night.jobs.schedule" -> {
                 arity(operation, args, 5);
@@ -322,7 +344,10 @@ public final class NightExtension implements RuntimeExtension {
     }
 
     @Override public void close() {
-        try { redis.close(); }
-        finally { jdbc.close(); }
+        try { rabbitmq.close(); }
+        finally {
+            try { redis.close(); }
+            finally { jdbc.close(); }
+        }
     }
 }
