@@ -83,6 +83,8 @@ def main():
                 expect("/api/purchases/1", 404, token=tokens["READER"])
                 expect("/api/purchases/1", 403, token=tokens["READER"], method="POST", payload="2")
                 expect("/api/purchases/1", 400, token=tokens["WRITER"], method="POST", payload="0")
+                expect("/api/purchases/1", 400, token=tokens["WRITER"], method="POST", payload="oops")
+                expect("/api/purchases/not-an-id", 400, token=tokens["WRITER"], method="POST", payload="2")
                 expect("/api/purchases/99", 404, token=tokens["WRITER"], method="POST", payload="2")
                 created = expect("/api/purchases/1", 201, token=tokens["WRITER"],
                                  method="POST", payload="2")
@@ -95,7 +97,7 @@ def main():
                 assert metrics["requests"] >= 12, metrics
                 assert metrics["access_denied"] >= 4, metrics
                 code, _, headers = request("/api/purchases", token=tokens["READER"])
-                assert headers.get("X-Content-Type-Options") == "nosniff", headers
+                assert {key.lower(): value for key, value in headers.items()}.get("x-content-type-options") == "nosniff", headers
                 huge = "1" * (1024 * 1024 + 1)
                 expect("/api/purchases/1", 413, token=tokens["WRITER"],
                        method="POST", payload=huge)

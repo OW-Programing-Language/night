@@ -31,6 +31,8 @@ functor MakePurchases(Stock: PROD_CATALOG) -> PURCHASES:
     route "GET /api/purchases/:id":
       if: night.is_active("purchases") == 0
         respond: response(503, {error: "purchases inactive"})
+      if: extension("night.validation.positive_int", param("id")) == 0
+        respond: response(400, {error: "invalid purchase id"})
       set wanted int: int(param("id"))
       set entries: extension("night.data.query", "SELECT id, item, quantity, total FROM purchases WHERE id = ?", [wanted])
       if: len(entries) == 0
@@ -40,6 +42,10 @@ functor MakePurchases(Stock: PROD_CATALOG) -> PURCHASES:
     route "POST /api/purchases/:item":
       if: night.is_active("purchases") == 0
         respond: response(503, {error: "purchases inactive"})
+      if: extension("night.validation.positive_int", param("item")) == 0
+        respond: response(400, {error: "invalid item id"})
+      if: extension("night.validation.positive_int", body()) == 0
+        respond: response(400, {error: "invalid quantity"})
       set item int: int(param("item"))
       set quantity int: int(body())
       if: quantity <= 0

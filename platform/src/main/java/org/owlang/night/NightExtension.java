@@ -110,6 +110,16 @@ public final class NightExtension implements RuntimeExtension {
                 Object value = args.get(0);
                 yield value == null || (value instanceof String s && s.isBlank()) ? 0 : 1;
             }
+            case "night.validation.positive_int" -> {
+                arity(operation, args, 1);
+                String raw = string(args, 0);
+                yield raw.matches("[1-9][0-9]{0,8}") ? 1 : 0;
+            }
+            case "night.validation.unsigned_int" -> {
+                arity(operation, args, 1);
+                String raw = string(args, 0);
+                yield raw.matches("(0|[1-9][0-9]{0,8})") ? 1 : 0;
+            }
             case "night.validation.max_length" -> {
                 arity(operation, args, 2);
                 Object value = args.get(0);
@@ -148,7 +158,12 @@ public final class NightExtension implements RuntimeExtension {
     }
 
     @Override public void afterRequest(HttpExchange exchange, int status, long elapsedNanos) {
-        metrics.observe(status, elapsedNanos);
+        try {
+            metrics.observe(status, elapsedNanos);
+        } finally {
+            // Uncommitted DB work may never survive into the next request.
+            jdbc.cleanupRequest();
+        }
     }
 
     @Override public void close() { jdbc.close(); }

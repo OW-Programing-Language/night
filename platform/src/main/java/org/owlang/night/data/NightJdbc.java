@@ -166,6 +166,20 @@ public final class NightJdbc implements AutoCloseable {
         }
     }
 
+    /** Ensure that a failed or unfinished route never leaks a transaction to the next request. */
+    public void cleanupRequest() {
+        Connection active = transaction.get();
+        if (active == null) return;
+        try {
+            active.rollback();
+        } catch (SQLException ignored) {
+            // Connection is returned to Hikari; failed transactions are not reused.
+        } finally {
+            transaction.remove();
+            closeConnection(active);
+        }
+    }
+
     public int health() {
         try {
             query("SELECT 1 AS result", List.of());

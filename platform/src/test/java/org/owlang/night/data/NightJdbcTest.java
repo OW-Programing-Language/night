@@ -27,6 +27,20 @@ class NightJdbcTest {
         }
     }
 
+    @Test void failedRequestRollsBackUncommittedConnection() {
+        Assumptions.assumeTrue(System.getenv("NIGHT_JDBC_URL") != null);
+        try (NightJdbc jdbc = new NightJdbc()) {
+            jdbc.open();
+            jdbc.execute("CREATE TABLE IF NOT EXISTS night_cleanup(id INT PRIMARY KEY)", List.of());
+            jdbc.execute("DELETE FROM night_cleanup", List.of());
+            jdbc.begin();
+            jdbc.execute("INSERT INTO night_cleanup(id) VALUES (?)", List.of(123));
+            jdbc.cleanupRequest();
+            assertEquals(0, jdbc.query("SELECT * FROM night_cleanup", List.of()).size());
+            assertThrows(IllegalStateException.class, jdbc::rollback);
+        }
+    }
+
     @Test void rejectsQueryParameterObjects() {
         Assumptions.assumeTrue(System.getenv("NIGHT_JDBC_URL") != null);
         try (NightJdbc jdbc = new NightJdbc()) {
