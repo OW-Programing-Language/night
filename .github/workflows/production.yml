@@ -88,7 +88,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      NIGHT_RABBITMQ_URL: amqp://night_test:night_ci_password@127.0.0.1:5672/
+      NIGHT_RABBITMQ_URL: amqp://night_test:night_ci_password@127.0.0.1:5672/%2F
       NIGHT_RABBITMQ_ALLOW_INSECURE_LOOPBACK: "true"
       NIGHT_RABBITMQ_QUEUE: night_ci_events
       NIGHT_REDIS_URL: redis://127.0.0.1:6379
