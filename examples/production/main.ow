@@ -1,0 +1,40 @@
+# Night production-starter example:
+# - fail-closed pre-controller Bearer auth + role restrictions
+# - PostgreSQL/H2 JDBC pool, parameterized SQL, Flyway migrations
+# - /_night/health, /_night/ready and /_night/metrics
+# - typed native modules/functors and lifecycle event bus
+import "../../src/NightApp.ow"
+import "../../src/modules/security/NightSecurity.ow"
+import "../../src/modules/data/NightData.ow"
+import "../../src/modules/actuator/NightActuator.ow"
+import "catalog/api/CatalogApi.ow"
+import "catalog/infra/Catalog.ow"
+import "purchases/api/PurchasesApi.ow"
+import "purchases/infra/MakePurchases.ow"
+
+main:
+  set security: new NightSecurity()
+  call: security.allow_public("GET /_night/health")
+  call: security.role("GET /_night/modules", "ADMIN")
+  call: security.role("GET /_night/metrics", "ADMIN")
+  call: security.role("GET /_night/ready", "ADMIN")
+  call: security.role("POST /api/purchases/:item", "WRITER")
+  # Fail fast at startup if no configured bearer credentials.
+  call: security.enable()
+
+  set database: new NightData()
+  call: database.open()
+  call: database.migrate("filesystem:examples/production/db/migration")
+  call: assert(database.healthy() == 1, "SQL connection is ready")
+
+  set purchases PURCHASES: MakePurchases(Production.Catalog)
+  set night: new NightApp()
+  call: night.use_native_as(purchases, "PURCHASES")
+  call: night.use_native_as(Production.Catalog, "PROD_CATALOG")
+  call: assert(night.boot() == 1, "Night boot")
+
+  set actuator: new NightActuator()
+  call: night.mount_system()
+  call: actuator.mount()
+  print: "Night platform ready on http://localhost:8080"
+  serve: 8080

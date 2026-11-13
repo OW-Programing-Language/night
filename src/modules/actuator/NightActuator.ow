@@ -1,0 +1,15 @@
+# Spring Boot Actuator-inspired endpoints (not Java JMX).
+# /_night/health is provided by NightApp and can be public.
+# Protect /_night/metrics and /_night/ready with ADMIN role.
+class NightActuator:
+  fn new():
+    return: 0
+
+  fn mount():
+    route "GET /_night/metrics":
+      respond: extension("night.actuator.metrics")
+    route "GET /_night/ready":
+      if: extension("night.data.health") == 0
+        respond: response(503, {status: "DOWN", database: "DOWN"})
+      respond: {status: "UP", database: "UP"}
+    return: 1

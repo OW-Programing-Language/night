@@ -1,0 +1,40 @@
+name: Night Production Starters
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  platform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NIGHT_JDBC_URL: "jdbc:h2:mem:night_ci;DB_CLOSE_DELAY=-1"
+      NIGHT_JDBC_USER: sa
+      NIGHT_JDBC_PASSWORD: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OW-Programing-Language/ow-lang
+          path: ow-lang
+          ref: 3be777a7ee2c9204ebe653d89e749e0dcfe4b831
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: |
+            ow-lang/pom.xml
+            platform/pom.xml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build and install OW with the extension SPI
+        run: mvn -B -q -f ow-lang/pom.xml install
+      - name: Run Night platform unit tests and package shaded plugin
+        run: mvn -B -q -f platform/pom.xml package
+      - name: Validate production example and imported native modules
+        run: java -cp "ow-lang/target/OwIDE.jar:platform/target/night-platform-0.2.0-SNAPSHOT.jar" dev.oreo.Main check examples/production/main.ow
+      - name: Run live secured HTTP + JDBC smoke integration
+        run: python3 tests/production_smoke.py

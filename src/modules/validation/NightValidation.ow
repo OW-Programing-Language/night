@@ -1,0 +1,10 @@
+# Reusable input guard helpers. Route must explicitly return HTTP 400 on failure.
+class NightValidation:
+  fn new():
+    return: 0
+
+  fn required(value):
+    return: extension("night.validation.required", value)
+
+  fn max_length(value, limit):
+    return: extension("night.validation.max_length", value, limit)

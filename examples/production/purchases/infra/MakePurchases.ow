@@ -1,0 +1,58 @@
+# Genuine typed functor; depends on a catalog signature, not implementation.
+functor MakePurchases(Stock: PROD_CATALOG) -> PURCHASES:
+  fn name() -> string:
+    return: "purchases"
+  fn requires() -> array:
+    return: ["catalog"]
+  fn register() -> int:
+    return: 1
+  fn start() -> int:
+    return: extension("night.data.health")
+  fn stop() -> int:
+    return: 1
+  fn on_event(type string, payload int) -> int:
+    return: 1
+  fn accepted(item int, quantity int) -> int:
+    if: quantity <= 0
+      return: 0
+    return: Stock.available(item)
+  fn create(item int, quantity int) -> int:
+    if: quantity <= 0
+      return: 0
+    if: Stock.available(item) == 0
+      return: 0
+    return: extension("night.data.execute", "INSERT INTO purchases(item, quantity, total) VALUES (?, ?, ?)", [item, quantity, Stock.price(item) * quantity])
+  fn mount() -> int:
+    route "GET /api/purchases":
+      if: night.is_active("purchases") == 0
+        respond: response(503, {error: "purchases inactive"})
+      respond: extension("night.data.query", "SELECT id, item, quantity, total FROM purchases ORDER BY id", [])
+
+    route "GET /api/purchases/:id":
+      if: night.is_active("purchases") == 0
+        respond: response(503, {error: "purchases inactive"})
+      if: extension("night.validation.positive_int", param("id")) == 0
+        respond: response(400, {error: "invalid purchase id"})
+      set wanted int: int(param("id"))
+      set entries: extension("night.data.query", "SELECT id, item, quantity, total FROM purchases WHERE id = ?", [wanted])
+      if: len(entries) == 0
+        respond: response(404, {error: "purchase not found"})
+      respond: entries[0]
+
+    route "POST /api/purchases/:item":
+      if: night.is_active("purchases") == 0
+        respond: response(503, {error: "purchases inactive"})
+      if: extension("night.validation.positive_int", param("item")) == 0
+        respond: response(400, {error: "invalid item id"})
+      if: extension("night.validation.positive_int", body()) == 0
+        respond: response(400, {error: "invalid quantity"})
+      set item int: int(param("item"))
+      set quantity int: int(body())
+      if: quantity <= 0
+        respond: response(400, {error: "quantity must be positive"})
+      if: purchases.accepted(item, quantity) == 0
+        respond: response(404, {error: "item not available"})
+      call: purchases.create(item, quantity)
+      call: night.emit("purchase.created", item)
+      respond: response(201, {created: true, item: item, quantity: quantity})
+    return: 1

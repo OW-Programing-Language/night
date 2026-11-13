@@ -1,0 +1,4 @@
+module_type PROD_CATALOG:
+  include NIGHT_COMPONENT
+  fn price(item int) -> int
+  fn available(item int) -> int
