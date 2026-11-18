@@ -62,3 +62,5 @@ No automatic outbox-to-Kafka worker, retry queues, DLQ, multiple-subscription ma
 `NightKafkaTest` covers fail-closed transport policy, invalid names/IDs and a **real Kafka 3.9.1 KRaft broker** for producer confirmations, manual offset commit, restart without replay after ACK, and redelivery after a simulated crash before ACK. The GitHub Actions `kafka-integration` job boots an ephemeral broker and runs this JUnit suite.
 
 Passing CI is not a substitute for real TLS/SASL tests, multi-broker failover, long-running soak tests or independent release review.
+
+For an independently supervised Kafka consumer that inserts into PostgreSQL **before** offset ACK, see [Night Inbox](inbox.md). This durable-inbox bridge does not implement arbitrary OW callbacks or broker-side poison-message quarantine.
