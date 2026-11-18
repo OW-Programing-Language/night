@@ -23,6 +23,9 @@ jobs:
       NIGHT_KAFKA_BOOTSTRAP_SERVERS: '127.0.0.1:9092'
       NIGHT_KAFKA_SECURITY_PROTOCOL: 'PLAINTEXT'
       NIGHT_KAFKA_ALLOW_INSECURE_LOOPBACK: 'true'
+      NIGHT_JDBC_URL: 'jdbc:postgresql://localhost:5432/night'
+      NIGHT_JDBC_USER: night_test
+      NIGHT_JDBC_PASSWORD: night_test_ci_only
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -51,10 +54,28 @@ jobs:
           done
           docker logs night-kafka
           exit 1
+      - name: Start ephemeral PostgreSQL 16 for transactional outbox
+        run: |
+          docker run -d --name night-postgres -p 5432:5432 \
+            -e POSTGRES_USER=night_test \
+            -e POSTGRES_PASSWORD=night_test_ci_only \
+            -e POSTGRES_DB=night \
+            postgres:16-alpine
+          for attempt in $(seq 1 40); do
+            if docker exec night-postgres pg_isready -U night_test -d night >/dev/null 2>&1; then
+              echo "PostgreSQL ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs night-postgres
+          exit 1
       - name: Install pinned OW compiler / runtime SPI
         run: mvn -B -q -f ow-lang/pom.xml install
       - name: Exercise real Kafka producer, group offsets and crash recovery
-        run: mvn -B -f platform/pom.xml -Dtest=NightKafkaTest test
+        run: mvn -B -f platform/pom.xml -Dtest=NightKafkaTest,NightOutboxDispatcherTest test
       - name: Broker logs on failure
         if: failure()
-        run: docker logs night-kafka || true
+        run: |
+          docker logs night-kafka || true
+          docker logs night-postgres || true
