@@ -40,3 +40,5 @@ A worker can call `reject(delivery_tag, 1)` to requeue after failure. `reject(..
 `NightRabbitMQTest` checks URI policy and a real broker publish/poll/ACK round trip on CI. Successful CI outcome must be verified before claiming integration readiness.
 
 For a standalone RabbitMQ consumer that persists event bodies in PostgreSQL **before** manual ACK, see [Night Inbox](inbox.md). The adapter remains a polling worker; it does not run arbitrary OW callbacks.
+
+The standalone consumer bridge can quarantine missing/invalid RabbitMQ message IDs before manual ACK; see [broker quarantine](broker-quarantine.md). An oversized-to-retain poison body remains unacknowledged.

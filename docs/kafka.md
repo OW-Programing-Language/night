@@ -64,3 +64,5 @@ No automatic outbox-to-Kafka worker, retry queues, DLQ, multiple-subscription ma
 Passing CI is not a substitute for real TLS/SASL tests, multi-broker failover, long-running soak tests or independent release review.
 
 For an independently supervised Kafka consumer that inserts into PostgreSQL **before** offset ACK, see [Night Inbox](inbox.md). This durable-inbox bridge does not implement arbitrary OW callbacks or broker-side poison-message quarantine.
+
+The standalone consumer bridge can quarantine malformed Kafka envelope keys before committing their offsets; see [broker quarantine](broker-quarantine.md). Restart recovery is via the external supervisor, not uninterrupted multi-broker failover.
