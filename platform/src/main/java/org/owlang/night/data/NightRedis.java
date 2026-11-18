@@ -64,6 +64,16 @@ public final class NightRedis implements AutoCloseable {
 
     private String fullKey(String input) { return namespace + ":" + key(input); }
 
+    // Redis Streams share the authenticated TLS pool while using a key prefix
+    // deliberately inaccessible to the public cache-key grammar (the slash).
+    // This prevents a cache operation from deleting or replacing a stream.
+    JedisPooled streamClient() { return ready(); }
+
+    String streamKey(String input) {
+        ready();
+        return namespace + ":streams/" + key(input);
+    }
+
     public int put(String key, String value, int ttlSeconds) {
         if (ttlSeconds < 1 || ttlSeconds > 86400 || value == null
                 || value.length() > 1_048_576)
