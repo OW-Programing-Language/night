@@ -64,9 +64,8 @@ class NightMessageSchemaIntegrationTest {
             var source = (NightConsumerBridge.Source) pending::poll;
             NightMessageSchemas schemas = forTopic("orders.created");
             assertThrows(IllegalArgumentException.class, () ->
-                    new NightConsumerBridge(new NightInbox(jdbc), source, ns)
-                            .equals(new NightConsumerBridge(new NightInbox(jdbc),
-                                    null, source, ns, schemas)));
+                    new NightConsumerBridge(new NightInbox(jdbc),
+                            null, source, ns, schemas));
             var bridge = new NightConsumerBridge(new NightInbox(jdbc),
                     new NightBrokerQuarantine(jdbc), source, ns, schemas);
             assertEquals(NightConsumerBridge.Result.QUARANTINED, bridge.consumeOne());
