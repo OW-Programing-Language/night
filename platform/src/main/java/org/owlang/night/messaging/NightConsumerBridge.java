@@ -39,17 +39,27 @@ public final class NightConsumerBridge {
 
     private final NightInbox inbox;
     private final NightBrokerQuarantine quarantine;
+    private final NightMessageSchemas schemas;
     private final Source source;
     private final String namespace;
 
     public NightConsumerBridge(NightInbox inbox, Source source, String namespace) {
-        this(inbox, null, source, namespace);
+        this(inbox, null, source, namespace, null);
     }
 
     public NightConsumerBridge(NightInbox inbox, NightBrokerQuarantine quarantine,
                                Source source, String namespace) {
+        this(inbox, quarantine, source, namespace, null);
+    }
+
+    /** Schema validation requires durable quarantine to prevent unvalidated intake. */
+    public NightConsumerBridge(NightInbox inbox, NightBrokerQuarantine quarantine,
+                               Source source, String namespace, NightMessageSchemas schemas) {
         this.inbox = Objects.requireNonNull(inbox);
+        if (schemas != null && quarantine == null)
+            throw new IllegalArgumentException("Message schemas require durable quarantine");
         this.quarantine = quarantine;
+        this.schemas = schemas;
         this.source = Objects.requireNonNull(source);
         this.namespace = NightInbox.namespace(namespace);
     }
@@ -70,6 +80,8 @@ public final class NightConsumerBridge {
         Message message = source.poll();
         if (message == null) return Result.IDLE;
         String reason = invalidReason(message.eventId(), message.payload());
+        if (reason == null && schemas != null)
+            reason = schemas.invalidReason(message.topic(), message.payload());
         if (reason != null && quarantine != null) {
             // Neither a DB outage nor a too-large-to-retain envelope may
             // advance Kafka offsets or remove Rabbit messages.
