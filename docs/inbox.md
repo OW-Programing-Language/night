@@ -84,3 +84,7 @@ Worker IDs must be unique across running application processes, preferably rando
 GitHub Actions run `NightInboxTest` and `NightConsumerBridgeTest` with PostgreSQL 16 and real RabbitMQ/Kafka brokers. This does not certify multi-node broker failover, multi-region consistency, exactly-once application effects, malicious payload parsing, or external security controls.
 
 See [Night outbox worker](outbox-dispatcher.md), [Kafka](kafka.md), and [RabbitMQ](rabbitmq.md).
+
+## Optional JSON/schema checks at intake
+
+To validate message JSON before adding an event to the inbox, set `NIGHT_CONSUMER_SCHEMAS_FILE` to a trusted absolute path; run Flyway V8 first. The worker checks exact topic rules, refuses duplicate JSON object keys and routes malformed JSON or schema violations to the existing durable quarantine before broker ACK. Invalid or missing schema configuration fails closed. See [Night message schemas](message-schemas.md) for examples and limitations.
