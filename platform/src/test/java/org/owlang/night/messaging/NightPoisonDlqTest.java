@@ -78,6 +78,16 @@ class NightPoisonDlqTest {
                 new NightKafka(), "bad/topic"));
         assertThrows(IllegalArgumentException.class, () -> NightPoisonDlq.rabbitMq(
                 new NightRabbitMQ(), "bad/topic"));
+        assertThrows(IllegalArgumentException.class, () -> NightPoisonDlq.configuredDestination(
+                Map.of("NIGHT_CONSUMER_DLQ_QUEUE", "A".repeat(65)), "rabbitmq", "orders"));
+        assertThrows(IllegalStateException.class, () -> new NightRabbitMQ("other_queue")
+                .publishConfirmedTo("expected_dlq", "event-12345678", "{}"));
+        assertThrows(IllegalArgumentException.class, () -> NightPoisonDlq.kafka(
+                new NightKafka(), "orders.created").publish(event, "INVALID_EVENT_ID"));
+        var rabbitEvent = new NightConsumerBridge.Message("orders.created", "", "{}",
+                "rabbitmq", "queue:identity", () -> {});
+        assertThrows(IllegalArgumentException.class, () -> NightPoisonDlq.rabbitMq(
+                new NightRabbitMQ(), "orders.created").publish(rabbitEvent, "INVALID_EVENT_ID"));
         assertThrows(IllegalArgumentException.class, () -> new NightConsumerBridge(
                 new NightInbox(new NightJdbc()), null, () -> null, "orders",
                 null, (message, reason) -> {}));
