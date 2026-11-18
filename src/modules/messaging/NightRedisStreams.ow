@@ -1,0 +1,33 @@
+# Redis Streams at-least-once event delivery, using NIGHT_REDIS_URL / namespace.
+# Works with a Redis ACL/TLS connection via the shared NightRedis pool.
+# Consumer groups are durable on a properly persisted Redis server.
+# Never run these synchronous I/O calls from an OW HTTP request handler.
+# All effects must be idempotent, and events acknowledged only after success.
+class NightRedisStreams:
+  fn new():
+    return: 0
+
+  fn open():
+    return: extension("night.redis.open")
+
+  # Creates group from beginning; idempotent (never rewinds an existing group).
+  fn create_group(stream, group):
+    return: extension("night.streams.create_group", stream, group)
+
+  # Returns the Redis stream entry ID, or throws on publish failure.
+  fn publish(stream, message_id, json_body):
+    return: extension("night.streams.publish", stream, message_id, json_body)
+
+  # Nonblocking: {present: 0|1, events: [{stream_id, message_id, body}, ...]}.
+  # count is limited to 1..32. New events become pending until acknowledged.
+  fn poll(stream, group, consumer, count):
+    return: extension("night.streams.poll", stream, group, consumer, count)
+
+  # Reassign idle pending events to this consumer; min_idle_ms is 1000..86400000.
+  # Repeat with next_cursor until 0-0. Does not guarantee fencing/exactly-once.
+  fn reclaim(stream, group, consumer, min_idle_ms, cursor, count):
+    return: extension("night.streams.reclaim", stream, group, consumer, min_idle_ms, cursor, count)
+
+  # Return 1 on first ACK, 0 for already-acknowledged/non-pending entry.
+  fn acknowledge(stream, group, stream_id):
+    return: extension("night.streams.ack", stream, group, stream_id)

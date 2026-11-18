@@ -34,7 +34,7 @@ A worker can call `reject(delivery_tag, 1)` to requeue after failure. `reject(..
 - Manual per-message ACK/NACK; polling API for OW (no arbitrary callback evaluation).
 - TLS and server hostname verification for `amqps://` URIs.
 - All channel operations synchronized to protect against concurrent access; this is not a high-throughput multi-channel worker pool.
-- No automatic dead-letter exchange setup, delayed retry scheduler, consumer group framework, exactly-once semantics, schema registry, Kafka adapter or Redis Streams adapter.
+- No automatic dead-letter exchange setup, delayed retry scheduler, consumer group framework, exactly-once semantics, schema registry or Kafka adapter. Redis Streams is available separately in [Night Redis Streams](redis-streams.md).
 - The RabbitMQ Java client cautions that polling with `basicGet` is inefficient. Production worker workloads should use a dedicated supervised consumer loop outside the OW request thread.
 
 `NightRabbitMQTest` checks URI policy and a real broker publish/poll/ACK round trip on CI. Successful CI outcome must be verified before claiming integration readiness.

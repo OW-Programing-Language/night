@@ -8,6 +8,7 @@ import org.owlang.night.cache.NightCache;
 import org.owlang.night.data.NightJdbc;
 import org.owlang.night.data.NightRepository;
 import org.owlang.night.data.NightRedis;
+import org.owlang.night.data.NightRedisStreams;
 import org.owlang.night.http.NightHttpClient;
 import org.owlang.night.data.NightOutbox;
 import org.owlang.night.security.BearerSecurity;
@@ -40,6 +41,7 @@ public final class NightExtension implements RuntimeExtension {
     private final NightMetrics metrics = new NightMetrics();
     private final NightCache cache = new NightCache();
     private final NightRedis redis = new NightRedis();
+    private final NightRedisStreams streams = new NightRedisStreams(redis);
     private volatile NightHttpClient outboundHttp;
 
     private NightHttpClient outboundHttp() {
@@ -230,6 +232,29 @@ public final class NightExtension implements RuntimeExtension {
             case "night.actuator.metrics" -> {
                 arity(operation, args, 0);
                 yield metrics.snapshot();
+            }
+            case "night.streams.create_group" -> {
+                arity(operation, args, 2);
+                yield streams.createGroup(string(args, 0), string(args, 1));
+            }
+            case "night.streams.publish" -> {
+                arity(operation, args, 3);
+                yield streams.publish(string(args, 0), string(args, 1), string(args, 2));
+            }
+            case "night.streams.poll" -> {
+                arity(operation, args, 4);
+                yield streams.poll(string(args, 0), string(args, 1),
+                        string(args, 2), integer(args, 3));
+            }
+            case "night.streams.reclaim" -> {
+                arity(operation, args, 6);
+                yield streams.reclaim(string(args, 0), string(args, 1),
+                        string(args, 2), longValue(args, 3),
+                        string(args, 4), integer(args, 5));
+            }
+            case "night.streams.ack" -> {
+                arity(operation, args, 3);
+                yield streams.acknowledge(string(args, 0), string(args, 1), string(args, 2));
             }
             case "night.redis.open" -> {
                 arity(operation, args, 0);
