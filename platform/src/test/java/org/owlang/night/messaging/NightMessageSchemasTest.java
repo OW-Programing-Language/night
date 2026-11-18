@@ -50,6 +50,8 @@ class NightMessageSchemasTest {
         assertEquals("INVALID_JSON", rules.invalidReason("orders.created",
                 "{\"orderId\":1,\"orderId\":2}"));
         assertEquals("INVALID_JSON", rules.invalidReason("orders.created",
+                "{\"orderId\":10,\"customer\":{\"city\":\"Paris\"}} true"));
+        assertEquals("INVALID_JSON", rules.invalidReason("orders.created",
                 "{\"customer\":{\"city\":\"x\",\"city\":\"y\"}}"));
         String deeplyNested = "{\"x\":".repeat(18) + "1" + "}".repeat(18);
         assertEquals("INVALID_JSON", rules.invalidReason("orders.created", deeplyNested));
