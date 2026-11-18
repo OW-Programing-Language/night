@@ -90,6 +90,10 @@ class NightInboxTest {
             assertEquals(0, inbox.accept(ns, topic, id, "evil-replayed-payload"));
             assertEquals("COMPLETED", state(jdbc, ns, topic, id));
             assertTrue(inbox.claim(ns, "worker-1234", 30, 4).isEmpty());
+            // Keep the shared CI outbox table clean for the existing
+            // dispatcher integration suite (which leases the oldest event).
+            assertEquals(1, jdbc.execute(
+                    "DELETE FROM night_outbox WHERE event_id = ?", List.of(business)));
         }
     }
 
