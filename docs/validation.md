@@ -1,18 +1,45 @@
-# Night strict object validation (experimental)
+# Night strict object and nested array validation (experimental)
 
-Night adds a strict structured-object validator to its existing primitive guards. The API accepts an OW record (a map) and a bounded list of field rules.
+Night validates incoming OW records (maps) with explicit, source-controlled field rules. Unknown fields are denied to help prevent mass assignment. Validation does not mutate or coerce input.
 
 ```ow
 set guards: new NightValidation()
 set report: guards.object(
   {name: "Ada", age: 25},
-  [["name", "string", 1, 80], ["age", "integer", 0, 150]])
+  [["name", "string", 1, 80], ["age", "integer", 0, 150]]
+)
 ```
 
-Each rule has four fields: `[name, type, required, maximum]`. Supported types: `string` (maximum UTF-16 length), `integer` (absolute numeric bound), `boolean` (maximum ignored but must be positive). `required` is `1` or `0`.
+## Rules
 
-The result is `{valid: 1|0, errors: ["name:required", "age:type", ...]}`. Unknown fields are rejected with `unknown_field`, protecting against accidental mass assignment when callers validate the entire request object. Error messages never include input values.
+Primitive rules stay backward-compatible: `[fieldName, type, required, maximum]`.
 
-Schema definitions must come from trusted source code, not untrusted HTTP requests. Validate input **before** creating entities or running SQL. Applications must return HTTP 400 on validation failure; the validator does not automatically return a response status.
+- `string`: maximum UTF-16 length
+- `integer`: maximum absolute integer value
+- `boolean`: must be true or false (maximum is validated but otherwise unused)
 
-Current restrictions: flat objects only, no nested maps/arrays, no generic Bean Validation annotations, no JSON decoding/binding by the interpreter, no per-field coercion, no cross-field rules, and no schemas derived from OpenAPI. A future validation engine needs to address these before full Spring Validation parity.
+Nested object rules add a fifth element: `[fieldName, "object", required, 1, nestedFieldRules]`.
+
+Array rules add a fifth element: `[fieldName, "array", required, maxItems, elementDescriptor]`. The element descriptor is `["string", maxLength]`, `["integer", maxAbsoluteValue]`, `["boolean", 1]`, or `["object", nestedFieldRules]`. Arrays of arrays are not yet supported.
+
+For example, this request allows a nested profile, bounded tags, and line items:
+
+```ow
+set schema: [
+  ["profile", "object", 1, 1, [
+    ["city", "string", 1, 64]
+  ]],
+  ["tags", "array", 0, 16, ["string", 32]],
+  ["items", "array", 0, 50, ["object", [
+    ["sku", "string", 1, 64],
+    ["quantity", "integer", 1, 9999]
+  ]]]
+]
+set report: guards.object(request_body, schema)
+```
+
+The result is `{valid: 1|0, errors: ["profile.city:required", "items[0].sku:type", ...]}`. Unknown fields are represented by `unknown_field` or `profile:unknown_field`; their names and values are not echoed. The caller must explicitly return HTTP 400 on failure.
+
+**Resource limits:** maximum 128 fields per object, 64 rules per object, 256 rules per schema, 8 levels of nesting, 256 allowed array elements, and 64 errors per call. A rule exceeding these limits or containing invalid types fails closed. An oversized nested object or array reports a validation error instead of traversing its contents.
+
+**Boundary:** Schema definitions must be trusted source code, not arbitrary HTTP input. Validate before entity construction, SQL, or business logic. This is not an ORM, automatic HTTP binding layer, Bean Validation equivalent, cross-field validator, or protection against malicious input when applications skip the validation call.

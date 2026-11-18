@@ -2,7 +2,7 @@
 
 This page documents implemented APIs, **not** full Spring Security or Spring Data parity.
 
-## Optional per-process peer-IP quota
+## Optional per-process IP quota with explicit trusted proxies
 
 Set `NIGHT_IP_QUOTA_PER_MINUTE` to an integer from 1 to 1000000 before starting the process. Example:
 
@@ -10,9 +10,18 @@ Set `NIGHT_IP_QUOTA_PER_MINUTE` to an integer from 1 to 1000000 before starting 
 export NIGHT_IP_QUOTA_PER_MINUTE=120
 ```
 
-The extension counts **all requests, including invalid or missing authorization**, before expensive bearer/JWT verification and permits at most that many requests per TCP peer IP per 60-second fixed window. The quota returns HTTP 429 with JSON `{"error":"rate_limited"}`. A bounded table of up to 100000 peer addresses is used; when full, new peers are rejected until an expired entry can be removed.
+The extension counts **all requests, including invalid or missing authorization**, before expensive bearer/JWT verification and permits at most that many requests per selected client IP per 60-second fixed window. By default, the selected IP is **always the real TCP peer**. The quota returns HTTP 429 with JSON `{"error":"rate_limited"}`. A bounded table of up to 100000 peer addresses is used; when full, new peers are rejected until an expired entry can be removed.
 
-**Trust boundary:** `X-Forwarded-For`, `Forwarded`, and `X-Real-IP` are intentionally ignored. Behind a reverse proxy, the peer may be the proxy, so this is **not an end-user quota**. The proxy must enforce its own client-IP-aware rate limit and only trust forwarding headers from configured upstream proxies. This primitive does not provide distributed limits, request-cost accounting, or DoS protection. Roll out cautiously; a single-proxy deployment may share one bucket across all users.
+**Trust boundary:** Optional `NIGHT_TRUSTED_PROXY_CIDRS` is a comma-separated list of numeric CIDRs for **explicitly controlled reverse proxies only** (for example `192.0.2.10/32,2001:db8:1::/64`). When set, Night inspects `X-Forwarded-For` **only** if the socket peer matches a trusted proxy. It walks the chain from right to left until reaching the first untrusted hop; a spoofed leftmost address cannot override that hop. `Forwarded` and `X-Real-IP` are always ignored. Invalid forwarding headers from trusted peers fail with HTTP 400, and `/0` trusted networks are rejected. IPv4/IPv6 literals are accepted; hostnames, port suffixes, repeated headers, and more than 16 hops are rejected.
+
+Configure **only** your proxy's exact private addresses, and make sure the proxy overwrites or safely appends incoming `X-Forwarded-For`. Example:
+
+```sh
+export NIGHT_IP_QUOTA_PER_MINUTE=120
+export NIGHT_TRUSTED_PROXY_CIDRS='10.20.0.5/32,fd00:1::5/128'
+```
+
+**Limitations:** This is still a **process-local** counter. It cannot enforce distributed quotas or mitigate DDoS. A proxy hop that is not on the trusted list intentionally becomes the quota identity; all clients behind it can share a bucket. Keep ingress proxy rate limits and TLS in place. Do not trust arbitrary public CIDRs or deploy Night directly exposed while trusting public clients.
 
 ## Minimal Night Data repository helpers
 
@@ -44,4 +53,4 @@ Unit/integration test sources were added for quota windows, memory bounds, malic
 
 ## 1.0 remaining work
 
-JWT/OIDC, credential/password workflows, ABAC, tenant isolation, distributed throttling, typed entity mapping, Redis, broker durability, distributed observability, load tests, disaster recovery drills, and independent security audit remain outstanding. See GitHub issue #3.
+OIDC, account reset delivery, ABAC, tenant isolation, distributed throttling, typed entity mapping, Redis, broker durability, distributed observability, load tests, disaster recovery drills, and independent security audit remain outstanding. See GitHub issue #3.
