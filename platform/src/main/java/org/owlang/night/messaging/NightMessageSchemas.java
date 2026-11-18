@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -37,7 +38,7 @@ public final class NightMessageSchemas {
                             .maxStringLength(MAX_BODY_BYTES)
                             .maxNumberLength(64)
                             .build())
-                    .build());
+                    .build()).enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
 
     private final Map<String, List<?>> rulesByTopic;
     private final NightObjectValidation validator = new NightObjectValidation();
