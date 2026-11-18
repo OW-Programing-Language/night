@@ -44,6 +44,9 @@ public final class NightPoisonDlq {
         String destination = env.get(key);
         if (destination == null || destination.isBlank()) return null;
         NightInbox.topic(destination);
+        if ("rabbitmq".equals(broker)
+                && !destination.matches("[A-Za-z][A-Za-z0-9_.-]{0,63}"))
+            throw new IllegalArgumentException("RabbitMQ DLQ name must be at most 64 characters");
         if (destination.equals(sourceTopic))
             throw new IllegalArgumentException("Dead-letter destination must differ from source");
         return destination;
@@ -78,6 +81,8 @@ public final class NightPoisonDlq {
         return (event, reason) -> {
             if (!"kafka".equals(event.broker()))
                 throw new IllegalArgumentException("Kafka DLQ cannot route another transport");
+            if (destination.equals(event.topic()))
+                throw new IllegalArgumentException("Kafka DLQ cannot be the source topic");
             String body = referenceBody(event, reason);
             producer.publish(destination, fingerprint(event), body);
         };
@@ -90,8 +95,10 @@ public final class NightPoisonDlq {
         return (event, reason) -> {
             if (!"rabbitmq".equals(event.broker()))
                 throw new IllegalArgumentException("RabbitMQ DLQ cannot route another transport");
+            if (destination.equals(event.topic()))
+                throw new IllegalArgumentException("RabbitMQ DLQ cannot be the source queue");
             String body = referenceBody(event, reason);
-            if (producer.publish(fingerprint(event), body) != 1)
+            if (producer.publishConfirmedTo(destination, fingerprint(event), body) != 1)
                 throw new IllegalStateException("RabbitMQ dead-letter notification unconfirmed");
         };
     }
