@@ -70,7 +70,8 @@ public final class NightConsumerWorker {
                 rabbit.open();
                 source = NightConsumerBridge.rabbitMq(rabbit, rabbitQueue);
             }
-            NightConsumerBridge bridge = new NightConsumerBridge(new NightInbox(jdbc),
+            NightConsumerBridge bridge = new NightConsumerBridge(
+                    new NightInbox(jdbc), new NightBrokerQuarantine(jdbc),
                     source, namespace);
             System.out.println("Night consumer worker started (transport=" + broker
                     + ", namespace=" + namespace + ")");
