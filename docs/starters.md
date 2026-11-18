@@ -24,6 +24,7 @@ or Java libraries run unchanged inside OW.
 | `night-rabbitmq` | Spring AMQP | Durable queue publishing with confirmations, poll and manual ACK, TLS policy | No consumer supervision or broker retry policy |
 | `night-redis-streams` | Spring Data Redis Streams | Redis consumer groups, bounded publish/poll, manual ACK and idle pending recovery | No supervised workers, delayed retries, DLQ or cluster failover |
 | `night-kafka` | Spring for Apache Kafka | TLS/SASL_SSL producer confirmations, bounded group polling, manual offset ACK, restart redelivery | One in-flight event, no managed worker, transactions/DLQ or multi-broker certification |
+| `night-inbox` | Durable consumer inbox | Supervised broker-to-PostgreSQL intake before ACK, idempotent event IDs, OW processing leases, retries and dead letters | No automatic OW callback processing, malformed-message quarantine or multi-broker failover certification |
 | `night-credentials` | Spring Security PasswordEncoder/UserDetails | JDBC-backed bcrypt passwords, 5-attempt lockout and one-time reset primitives | No public anti-enumeration reset service, session invalidation, MFA or completed IdP integration |
 | `night-openapi` | springdoc-openapi | Explicit route metadata and OpenAPI 3.0 spec generation | No schema introspection, typed request/response contracts or GraphQL |
 | `night-mail` | Spring Mail | SMTP STARTTLS/SMTPS with plain-text templates and audit table | No live SMTP integration/queue/bounce handling; handoff is not delivery |
