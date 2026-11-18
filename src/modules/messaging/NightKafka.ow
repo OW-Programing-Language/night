@@ -1,0 +1,33 @@
+# Experimental Kafka transport for OW native worker processes.
+# Requires NIGHT_KAFKA_BOOTSTRAP_SERVERS and TLS by default.
+# A single subscription per runtime supports one unacknowledged message at a time.
+# Kafka group offsets are cumulative: never ACK before committing business effects.
+class NightKafka:
+  fn new():
+    return: 0
+
+  fn open():
+    return: extension("night.kafka.open")
+
+  # Returns {topic, partition, offset, message_id} after broker ACK.
+  fn publish(topic, message_id, json_body):
+    return: extension("night.kafka.publish", topic, message_id, json_body)
+
+  # One topic/group per process; idempotent for the same topic/group.
+  fn subscribe(topic, group):
+    return: extension("night.kafka.subscribe", topic, group)
+
+  # Nonblocking / bounded poll (0..2000 milliseconds).
+  # {present:0}, or {present:1, topic, partition, offset, message_id, body}.
+  # Repeated calls return the same pending event until ACK or explicit retry.
+  fn poll(wait_ms):
+    return: extension("night.kafka.poll", wait_ms)
+
+  # ACK exactly the pending event, committing its partition offset+1.
+  # Never ACK before the database transaction is durably committed.
+  fn acknowledge(topic, partition, offset, message_id):
+    return: extension("night.kafka.ack", topic, partition, offset, message_id)
+
+  # Redeliver the pending offset without committing (returns 1 or 0).
+  fn retry_pending():
+    return: extension("night.kafka.retry_pending")
