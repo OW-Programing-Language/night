@@ -19,11 +19,7 @@ call: outbox.enqueue("order-123-created", "orders.created", "{\"orderId\":123}")
 # Commit NightData after both business state and outbox write succeed.
 ```
 
-A separate worker can repeatedly call `claim("worker-id", 30)`, publish
-the returned event to an external destination, then call
-`acknowledge(event_id, "worker-id")`. A failed publication calls
-`fail(event_id, "worker-id", retry_seconds, max_attempts)`.
-The claim API returns at most one event.
+The standalone [Night outbox dispatcher](outbox-dispatcher.md) now runs this workflow automatically using a dedicated Java process. It leases one event with `claim(worker-id, lease-seconds)`, confirms publish to **one configured** Kafka or RabbitMQ transport, then calls `acknowledge(event_id, worker-id)`. On failure it calls `fail(event_id, worker-id, retry-seconds, max-attempts)` using bounded exponential backoff. Events whose leases expire after the maximum number of attempts are dead-lettered. OW can still call the lower-level manual API, but one worker must never process the same event concurrently through a second transport.
 
 ## Guarantees
 
@@ -40,15 +36,12 @@ acknowledgement. Downstream handlers must deduplicate on event ID.
 
 ## Limitations blocking 1.0 completion
 
-- No built-in worker loop, broker adapter, schema registry, automatic dead-letter
-  replay tooling or exponential-backoff/jitter policy yet. Manual `replay_dead`
-  exists; expose it only behind explicit administrator authorization.
+- A dedicated broker worker loop now exists for **one configured transport** with bounded exponential backoff and manual replay. It does not implement a management UI, automatic dead-letter replay, jitter, broker-side idempotency, multi-destination fanout, or production rollout certification. Restrict `replay_dead` to operators.
 - The claim operation requires PostgreSQL and must not be invoked with H2.
 - Lease ownership is represented by worker name rather than a random fencing
   token; avoid sharing one worker ID between active processes.
 - A slow publication exceeding its lease can be claimed again; consumers must
   be idempotent.
-- No end-to-end Kafka/RabbitMQ/Redis Stream delivery test exists yet.
-- Test/CI code is committed, but live CI outcome needs verification.
+- Kafka and RabbitMQ end-to-end dispatcher integration tests are added in PR #12; production TLS/failover and throughput acceptance remain open. Redis Streams is not yet a dispatcher target.
 
 This is an **increment**, not the completed roadmap outbox + replay + broker goal.

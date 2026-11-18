@@ -19,7 +19,7 @@ or Java libraries run unchanged inside OW.
 | `night-cache` | Spring Cache | Bounded process-local TTL cache | Not a distributed Redis cache |
 | `night-data-redis` | Spring Data Redis | Shared Redis string cache with TLS, TTL and namespace prefixes | No pub/sub, tenant isolation or failover tests |
 | `night-http-client` | RestClient / WebClient | Allowlisted outbound HTTPS GET, timeouts, body limits, non-following redirects, bounded retry | DNS rebinding not fully blocked; production egress gateway required |
-| `night-outbox` | Transactional outbox pattern | PostgreSQL leases, dead-letter state and explicit replay | No automatic outbox-to-broker dispatcher |
+| `night-outbox` | Transactional outbox pattern | PostgreSQL leases, dead-letter state, operator replay and standalone Kafka/RabbitMQ dispatcher | At-least-once only; no automatic multi-destination routing, jitter or production failover certification |
 | `night-scheduler` | Spring Task / Quartz | PostgreSQL leased one-off/repeating jobs, manual ACK, retry and replay | No cron, supervised worker or automatic safe OW callbacks |
 | `night-rabbitmq` | Spring AMQP | Durable queue publishing with confirmations, poll and manual ACK, TLS policy | No consumer supervision or broker retry policy |
 | `night-redis-streams` | Spring Data Redis Streams | Redis consumer groups, bounded publish/poll, manual ACK and idle pending recovery | No supervised workers, delayed retries, DLQ or cluster failover |
@@ -37,7 +37,7 @@ or Java libraries run unchanged inside OW.
 | `night-security-oauth2` | Spring Security OAuth2 | OIDC discovery, authorization code+PKCE, session/cookie security, refresh tokens and real JWKS rotation testing |
 | `night-data-orm` | Spring Data JPA / Hibernate | Typed entities, repositories, relationship mappings, lazy loading, query derivation |
 | `night-data-redis-streams-full` | Spring Data Redis | Redis pub/sub, supervised stream workers, DLQ, retention, cross-node invalidation and cluster recovery |
-| `night-messaging-full` | Spring AMQP / Kafka | Durable retry workers, Kafka consumer fencing, outbox-to-broker dispatch and dead-letter transport |
+| `night-messaging-full` | Spring AMQP / Kafka | Broker consumer supervision, Kafka consumer fencing, multi-destination outbox routing and independent dead-letter policies |
 | `night-scheduling-full` | Spring Task / Quartz | Cron/calendar scheduling, safe OW worker callbacks, persistent misfire rules and distributed fencing |
 | `night-mail-delivery` | Spring Mail | Durable retries, live provider TLS testing, bounce/delivery webhooks, template HTML escaping |
 | `night-graphql` | Spring GraphQL | Query parser, validation, resolvers, auth boundaries |

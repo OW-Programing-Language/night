@@ -50,6 +50,22 @@ public final class NightOutbox {
                 """, List.of(worker, leaseSeconds));
     }
 
+    /**
+     * Dead-letter abandoned leases that have exhausted the retry budget.
+     * Without this reap operation a worker crashing repeatedly could leave an
+     * expired event eligible for unlimited future claims.
+     */
+    public int deadLetterExhaustedLeases(int maxAttempts) {
+        if (maxAttempts < 1 || maxAttempts > 1000)
+            throw new IllegalArgumentException("Outbox max attempts must be 1..1000");
+        return jdbc.execute("""
+                UPDATE night_outbox SET state = 'DEAD',
+                    lease_owner = NULL, lease_until = NULL
+                WHERE state = 'LEASED' AND lease_until < CURRENT_TIMESTAMP
+                    AND attempts >= ?
+                """, List.of(maxAttempts));
+    }
+
     /** Only the current unexpired lease owner may acknowledge delivery. */
     public int acknowledge(String eventId, String worker) {
         validate(eventId, 80, "event ID");
