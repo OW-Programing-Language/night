@@ -11,9 +11,9 @@ This is **at least once**, not exactly once. A broker or worker crash after Post
 
 ## 1. Run Flyway migrations
 
-Run the existing production Flyway migrations including **`V6__night_consumer_inbox.sql`** before starting the consumer worker. A deployed worker deliberately does **not** migrate the database. The table contains `PENDING`, `LEASED`, `COMPLETED` and `DEAD` processing states.
+Run the existing production Flyway migrations including **`V6__night_consumer_inbox.sql`** and **`V7__night_broker_quarantine.sql`** before starting the consumer worker. A deployed worker deliberately does **not** migrate the database. The table contains `PENDING`, `LEASED`, `COMPLETED` and `DEAD` processing states.
 
-A unique event ID is required on each message (`Kafka key` or `RabbitMQ message_id`, safe ASCII, 8–80 characters). Topics and namespaces must be safe ASCII identifiers. Untrusted or malformed events currently **fail closed and stop the worker** rather than being silently discarded; operator poison-message quarantine is a separate roadmap item.
+A unique event ID is required on each message (`Kafka key` or `RabbitMQ message_id`, safe ASCII, 8–80 characters). Topics and namespaces must be safe ASCII identifiers. Malformed transport envelopes are saved to the [broker poison quarantine](broker-quarantine.md) before acknowledgement (missing/invalid ID, null body or oversized normal inbox body). Envelopes larger than the complete 1 MiB capture limit still fail closed without broker ACK.
 
 ## 2. Start a standalone broker consumer worker
 
@@ -39,7 +39,7 @@ For RabbitMQ, configure `NIGHT_CONSUMER_BROKER=rabbitmq`, `NIGHT_RABBITMQ_URL=am
 
 Run the consumer independently of the web process under a supervisor such as the reference [systemd unit](../deploy/night-consumer.service) or Kubernetes. Unexpected DB/broker exceptions cause a **fail-fast exit**; the supervisor restarts the worker after backoff. A graceful signal attempts to finish the current intake before exit.
 
-**Security and operations:** Use an ACL-limited broker identity, TLS certificate verification, a dedicated least-privilege PostgreSQL account, bounded worker replication, and alerts on restart loops. Kafka consumer-group offsets are committed manually after insert; RabbitMQ uses manual ACK. Neither transport currently includes broker-side poison-message quarantine. The worker does **not** choose or execute dynamic callbacks.
+**Security and operations:** Use an ACL-limited broker identity, TLS certificate verification, a dedicated least-privilege PostgreSQL account, bounded worker replication, and alerts on restart loops. Kafka consumer-group offsets are committed manually after insert; RabbitMQ uses manual ACK. Both transports support PostgreSQL-backed quarantine of invalid envelopes, but no broker-side poison-message exchange or automatic application-schema validation. The worker does **not** choose or execute dynamic callbacks.
 
 ## 3. Process inbox events from OW
 
@@ -76,6 +76,7 @@ Worker IDs must be unique across running application processes, preferably rando
 
 - **Crash after inbox commit, before broker ACK:** broker redelivers; `accept` returns duplicate without updating original payload or state; broker ACK proceeds.
 - **Database unavailable:** broker ACK is never attempted, worker exits for supervised restart.
+- **Malformed envelope:** upsert full bounded body and error reason into `night_broker_quarantine` before ACK. Oversized-to-retain messages are **not** ACKed.
 - **Business transaction fails:** rollback both business work and the inbox ACK. Retry or move to durable DEAD after the attempt budget.
 - **Application worker crashes after claim:** lease eventually expires and can be reclaimed, unless the configured attempt limit has been reached.
 - **Dead letters:** manually review the row and call `replay_dead` after correcting the underlying problem. Completed events cannot be replayed by that API.
