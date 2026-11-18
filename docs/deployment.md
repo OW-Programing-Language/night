@@ -67,3 +67,7 @@ The image, Compose stack and manifests must pass build, functional TLS/identity 
 ## Dedicated outbox worker
 
 Night also provides an independently supervised PostgreSQL outbox dispatcher that publishes to a single configured Kafka or RabbitMQ broker. Read [outbox worker setup, lease policy and failure model](outbox-dispatcher.md). A reference systemd unit is at [`deploy/night-outbox.service`](../deploy/night-outbox.service). Apply migrations first; set `NIGHT_OUTBOX_BROKER` and broker credentials on the worker, not the public web process. Never deploy Kafka and RabbitMQ dispatchers against the same outbox table without a destination-routing migration.
+
+## Consumer inbox worker
+
+A separate [Night consumer inbox worker](inbox.md) ingests Kafka or RabbitMQ messages into PostgreSQL before broker ACK. Use the [hardened systemd template](../deploy/night-consumer.service), an external supervisor with restart backoff, and a unique namespace/group. The service is distinct from the outbox publisher and OW HTTP server. It requires Flyway V6 applied first.
