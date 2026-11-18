@@ -1,0 +1,60 @@
+name: Night Kafka broker integration
+
+on:
+  push:
+    paths:
+      - 'platform/**'
+      - 'src/modules/messaging/NightKafka.ow'
+      - '.github/workflows/kafka.yml'
+  pull_request:
+    paths:
+      - 'platform/**'
+      - 'src/modules/messaging/NightKafka.ow'
+      - '.github/workflows/kafka.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  kafka-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NIGHT_KAFKA_BOOTSTRAP_SERVERS: '127.0.0.1:9092'
+      NIGHT_KAFKA_SECURITY_PROTOCOL: 'PLAINTEXT'
+      NIGHT_KAFKA_ALLOW_INSECURE_LOOPBACK: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OW-Programing-Language/ow-lang
+          path: ow-lang
+          ref: 3be777a7ee2c9204ebe653d89e749e0dcfe4b831
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: |
+            ow-lang/pom.xml
+            platform/pom.xml
+      - name: Start ephemeral Kafka 3.9.1 KRaft broker
+        run: docker run -d --name night-kafka -p 9092:9092 apache/kafka:3.9.1
+      - name: Wait for broker metadata API
+        run: |
+          for attempt in $(seq 1 60); do
+            if docker exec night-kafka /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1; then
+              echo "Kafka ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs night-kafka
+          exit 1
+      - name: Install pinned OW compiler / runtime SPI
+        run: mvn -B -q -f ow-lang/pom.xml install
+      - name: Exercise real Kafka producer, group offsets and crash recovery
+        run: mvn -B -f platform/pom.xml -Dtest=NightKafkaTest test
+      - name: Broker logs on failure
+        if: failure()
+        run: docker logs night-kafka || true

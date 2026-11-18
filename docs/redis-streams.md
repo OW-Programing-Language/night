@@ -57,3 +57,5 @@ For example, a worker should:
 ## Verification
 
 `NightRedisStreamsTest` includes strict argument validation, an actual Redis 7 publish/poll/ACK cycle and a simulated worker disconnect followed by `XAUTOCLAIM`. CI exercises this class in the existing real-Redis integration job. Passing CI is not production failover certification.
+
+For Kafka producer/consumer groups, see [Night Kafka](kafka.md). Kafka and Redis Streams are separate transports; Night does not automatically bridge their events.

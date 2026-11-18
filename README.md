@@ -24,11 +24,12 @@ It does **not** run Spring Boot or require Java/Spring APIs in OW source.
 | Night Scheduler | PostgreSQL one-shot/repeating jobs, leases, retry and dead-letter replay | `src/modules/jobs/NightScheduler.ow` + `platform/` |
 | Night RabbitMQ | TLS-only durable queue adapter, publisher confirms, manual ACKs | `src/modules/messaging/NightRabbitMQ.ow` + `platform/` |
 | Night Redis Streams | At-least-once producer, consumer groups, manual ACK, pending recovery | `src/modules/messaging/NightRedisStreams.ow` + `platform/` |
+| Night Kafka | TLS-enabled producer, consumer groups, explicit offset ACK and restart redelivery | `src/modules/messaging/NightKafka.ow` + `platform/` |
 | Night Validation | Input guards | `src/modules/validation/` |
 | Night Test | Compiler checks, lifecycle tests, secured HTTP+SQL tests | `tests/` + GitHub Actions |
 
 See the [full starter ecosystem matrix](docs/starters.md) for what is
-implemented versus planned (OAuth2, ORM, Redis, Kafka, mail, GraphQL, etc.).
+implemented versus planned (OAuth2, ORM, Kafka durable workers, mail, GraphQL, etc.).
 
 ## Quickstart — two example applications
 
@@ -90,7 +91,7 @@ security and JDBC rather than unsecured application-level helper stubs.
 [Bookstore example](examples/bookstore/README.md) ·
 [Deployment templates](docs/deployment.md) · [Redis cache](docs/redis.md) ·
 [Credential store](docs/credentials.md) · [OpenAPI](docs/openapi.md) · [SMTP Mail](docs/mail.md) ·
-[Scheduler](docs/scheduler.md) · [RabbitMQ](docs/rabbitmq.md) · [Redis Streams](docs/redis-streams.md) · [Validation](docs/validation.md) ·
+[Scheduler](docs/scheduler.md) · [RabbitMQ](docs/rabbitmq.md) · [Redis Streams](docs/redis-streams.md) · [Kafka](docs/kafka.md) · [Validation](docs/validation.md) ·
 [Security/Data increments](docs/incremental-production.md) ·
 [Upgrade/rollback policy](docs/upgrade-policy.md) ·
 [OW starter guide](docs/guide.md)
@@ -102,8 +103,8 @@ candidate**, **not** a production-certified replacement for Spring Boot.
 The OW HTTP server remains single-worker and requires a reverse proxy for
 TLS, timeouts and rate limiting. JWT RS256, bcrypt credentials, OpenAPI metadata,
 SMTP handoff, a PostgreSQL outbox/scheduler, Redis caching and a RabbitMQ
-queue adapter and Redis Streams consumer groups are experimental increments; they are **not** full OAuth2/OIDC,
-Spring Data, Kafka integration, broker supervision, Quartz callback parity or 1.0
+queue adapter, Redis Streams groups and Kafka producer/consumer support are experimental increments; they are **not** full OAuth2/OIDC,
+Spring Data, outbox-to-broker delivery, broker supervision, Quartz callback parity or 1.0
 readiness. End-to-end deployment tests and an independent audit remain outstanding.
 
 [MIT License](LICENSE).
