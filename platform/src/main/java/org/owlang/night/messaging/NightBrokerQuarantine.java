@@ -26,12 +26,14 @@ public final class NightBrokerQuarantine {
     }
 
     static int utf8Size(String value) {
-        return value == null ? 0 : value.getBytes(StandardCharsets.UTF_8).length;
+        if (value == null) return 0;
+        if (value.length() > MAX_CAPTURE_BYTES * 3) return MAX_CAPTURE_BYTES * 3 + 1;
+        return value.getBytes(StandardCharsets.UTF_8).length;
     }
 
     /** Hash the immutable broker identity rather than exposing it as SQL key. */
     public static String fingerprint(String source) {
-        if (source == null || source.isBlank() || utf8Size(source) > MAX_CAPTURE_BYTES)
+        if (source == null || source.isBlank() || utf8Size(source) > MAX_CAPTURE_BYTES * 3)
             throw new IllegalArgumentException("Invalid poison broker identity");
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
