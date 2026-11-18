@@ -88,3 +88,7 @@ See [Night outbox worker](outbox-dispatcher.md), [Kafka](kafka.md), and [RabbitM
 ## Optional JSON/schema checks at intake
 
 To validate message JSON before adding an event to the inbox, set `NIGHT_CONSUMER_SCHEMAS_FILE` to a trusted absolute path; run Flyway V8 first. The worker checks exact topic rules, refuses duplicate JSON object keys and routes malformed JSON or schema violations to the existing durable quarantine before broker ACK. Invalid or missing schema configuration fails closed. See [Night message schemas](message-schemas.md) for examples and limitations.
+
+## Optional broker-side dead-letter reference
+
+Set `NIGHT_CONSUMER_DLQ_TOPIC` for Kafka or `NIGHT_CONSUMER_DLQ_QUEUE` for RabbitMQ to publish a **confirmed reference notification** after the original invalid envelope has been committed to PostgreSQL quarantine and before broker ACK. Full payload remains in restricted PostgreSQL. Details: [dead-letter routing](dead-letter-routing.md). No native RabbitMQ DLX is configured automatically.
