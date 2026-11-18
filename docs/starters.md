@@ -66,3 +66,5 @@ rather than OW's JSON models. No credentials are baked into source; production
 must supply them through a secret manager/environment.
 
 See [Production guide](production.md).
+
+**Consumer poison envelopes:** Invalid Kafka/RabbitMQ transport envelopes can be persisted to the [broker quarantine](broker-quarantine.md) before broker acknowledgement. This is not schema-aware application validation or high-availability certification.
