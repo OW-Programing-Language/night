@@ -105,6 +105,16 @@ public final class NightRabbitMQ implements AutoCloseable {
         }
     }
 
+    /**
+     * A poison publisher must verify that its dedicated connection actually
+     * points at the requested DLQ, never a normal ingestion source queue.
+     */
+    synchronized int publishConfirmedTo(String expectedQueue, String messageId, String body) {
+        if (queue == null || !queue.equals(expectedQueue))
+            throw new IllegalStateException("RabbitMQ DLQ connection has the wrong destination");
+        return publish(messageId, body);
+    }
+
     /** One message at a time, manual ACK after the business side effect. */
     public synchronized Interpreter.OwRecord poll() {
         try {
