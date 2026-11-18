@@ -18,6 +18,7 @@ import org.owlang.night.mail.NightMail;
 import org.owlang.night.validation.NightObjectValidation;
 import org.owlang.night.jobs.NightScheduler;
 import org.owlang.night.messaging.NightRabbitMQ;
+import org.owlang.night.messaging.NightKafka;
 import org.owlang.night.security.NightIpQuota;
 
 import java.util.List;
@@ -36,6 +37,7 @@ public final class NightExtension implements RuntimeExtension {
     private final NightObjectValidation objectValidation = new NightObjectValidation();
     private final NightScheduler scheduler = new NightScheduler(jdbc);
     private final NightRabbitMQ rabbitmq = new NightRabbitMQ();
+    private final NightKafka kafka = new NightKafka();
     private final NightRepository repository = new NightRepository(jdbc);
     private final NightOutbox outbox = new NightOutbox(jdbc);
     private final NightMetrics metrics = new NightMetrics();
@@ -68,6 +70,31 @@ public final class NightExtension implements RuntimeExtension {
                 arity(operation, args, 1);
                 security.publicRoute(string(args, 0));
                 yield 1;
+            }
+            case "night.kafka.open" -> {
+                arity(operation, args, 0);
+                yield kafka.open();
+            }
+            case "night.kafka.publish" -> {
+                arity(operation, args, 3);
+                yield kafka.publish(string(args, 0), string(args, 1), string(args, 2));
+            }
+            case "night.kafka.subscribe" -> {
+                arity(operation, args, 2);
+                yield kafka.subscribe(string(args, 0), string(args, 1));
+            }
+            case "night.kafka.poll" -> {
+                arity(operation, args, 1);
+                yield kafka.poll(integer(args, 0));
+            }
+            case "night.kafka.ack" -> {
+                arity(operation, args, 4);
+                yield kafka.acknowledge(string(args, 0), integer(args, 1),
+                        longValue(args, 2), string(args, 3));
+            }
+            case "night.kafka.retry_pending" -> {
+                arity(operation, args, 0);
+                yield kafka.retryPending();
             }
             case "night.rabbitmq.open" -> {
                 arity(operation, args, 0);
@@ -369,10 +396,13 @@ public final class NightExtension implements RuntimeExtension {
     }
 
     @Override public void close() {
-        try { rabbitmq.close(); }
+        try { kafka.close(); }
         finally {
+            try { rabbitmq.close(); }
+            finally {
             try { redis.close(); }
             finally { jdbc.close(); }
+            }
         }
     }
 }
