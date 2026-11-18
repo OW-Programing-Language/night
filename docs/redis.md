@@ -23,6 +23,6 @@ Do not store access tokens or other sensitive data without an appropriate data-r
 
 ## Verification
 
-`NightRedisTest` checks TLS settings, TTL bounds and cache operations. The real-Redis GitHub Actions service exercises cache put/get/delete with `redis:7-alpine` on loopback. The successful CI run remains to be verified. No distributed invalidation events, Redis Streams transport, pub/sub, or Redis cluster failover testing are implemented.
+`NightRedisTest` checks TLS settings, TTL bounds and cache operations. The real-Redis GitHub Actions service exercises cache put/get/delete with `redis:7-alpine` on loopback. The successful CI run remains to be verified. Redis Streams has a separate experimental adapter described in [Redis Streams](redis-streams.md), with real Redis consumer-group tests. No cross-node invalidation, pub/sub, cluster failover or production recovery certification is implemented.
 
 The main Spring Data Redis parity checkbox stays open until real production configuration, failover, keyspace policies, pub/sub and operator tests are complete.
