@@ -189,18 +189,40 @@ public final class NightKafka implements AutoCloseable {
      * cumulative, so this adapter intentionally permits one pending record.
      */
     public synchronized Interpreter.OwRecord poll(int waitMillis) {
-        if (waitMillis < 0 || waitMillis > 2000)
-            throw new IllegalArgumentException("Kafka poll wait must be between 0 and 2000ms");
-        KafkaConsumer<String, String> client = consumer();
-        if (pending != null) return record(pending);
-        ConsumerRecords<String, String> records = client.poll(Duration.ofMillis(waitMillis));
-        if (records.isEmpty()) {
+        ConsumerRecord<String, String> value = next(waitMillis);
+        if (value != null) return record(value);
+        Interpreter.OwRecord empty = new Interpreter.OwRecord();
+        empty.put("present", 0);
+        return empty;
+    }
+
+    /** Internal bridge API: exposes untrusted envelopes without throwing on bad IDs. */
+    synchronized Interpreter.OwRecord pollForIngestion(int waitMillis) {
+        ConsumerRecord<String, String> value = next(waitMillis);
+        if (value == null) {
             Interpreter.OwRecord empty = new Interpreter.OwRecord();
             empty.put("present", 0);
             return empty;
         }
+        Interpreter.OwRecord record = new Interpreter.OwRecord();
+        record.put("present", 1);
+        record.put("topic", value.topic());
+        record.put("partition", value.partition());
+        record.put("offset", value.offset());
+        record.put("message_id", value.key());
+        record.put("body", value.value());
+        return record;
+    }
+
+    private ConsumerRecord<String, String> next(int waitMillis) {
+        if (waitMillis < 0 || waitMillis > 2000)
+            throw new IllegalArgumentException("Kafka poll wait must be between 0 and 2000ms");
+        KafkaConsumer<String, String> client = consumer();
+        if (pending != null) return pending;
+        ConsumerRecords<String, String> records = client.poll(Duration.ofMillis(waitMillis));
+        if (records.isEmpty()) return null;
         pending = records.iterator().next();
-        return record(pending);
+        return pending;
     }
 
     private static Interpreter.OwRecord record(ConsumerRecord<String, String> value) {
@@ -227,6 +249,22 @@ public final class NightKafka implements AutoCloseable {
             throw new IllegalArgumentException("Kafka ACK must identify the exact pending event");
         // Committing offset+1 is safe because we never expose later records
         // before this one is acknowledged. A broker exception retains pending.
+        consumer().commitSync(Map.of(new TopicPartition(topic, partition),
+                new OffsetAndMetadata(offset + 1)), Duration.ofSeconds(10));
+        pending = null;
+        return 1;
+    }
+
+    /**
+     * The ingest bridge can ACK a quarantined malformed key only after its
+     * complete envelope was durably written to the quarantine table.
+     * Package-private: not exposed to OW application callers.
+     */
+    synchronized int acknowledgeIngestion(String topic, int partition, long offset) {
+        ConsumerRecord<String, String> value = pending;
+        if (value == null || !value.topic().equals(topic)
+                || value.partition() != partition || value.offset() != offset)
+            throw new IllegalArgumentException("Kafka ingestion ACK does not match pending offset");
         consumer().commitSync(Map.of(new TopicPartition(topic, partition),
                 new OffsetAndMetadata(offset + 1)), Duration.ofSeconds(10));
         pending = null;
