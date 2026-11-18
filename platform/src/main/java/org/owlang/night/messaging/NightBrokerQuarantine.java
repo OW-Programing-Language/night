@@ -51,7 +51,9 @@ public final class NightBrokerQuarantine {
             throw new IllegalArgumentException("Invalid poison broker");
         if (!("INVALID_EVENT_ID".equals(reason)
                 || "INVALID_PAYLOAD".equals(reason)
-                || "PAYLOAD_TOO_LARGE".equals(reason)))
+                || "PAYLOAD_TOO_LARGE".equals(reason)
+                || "INVALID_JSON".equals(reason)
+                || "SCHEMA_VIOLATION".equals(reason)))
             throw new IllegalArgumentException("Invalid poison reason");
         // Never partially retain data and then acknowledge a larger original.
         if (utf8Size(eventId) > MAX_CAPTURE_BYTES || utf8Size(payload) > MAX_CAPTURE_BYTES)
