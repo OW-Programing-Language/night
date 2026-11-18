@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS night_broker_quarantine (
   original_event_id TEXT,
   payload TEXT,
   redeliveries INTEGER NOT NULL DEFAULT 1,
-  first_seen TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  last_seen TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  first_seen TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (inbox_namespace, broker, topic, fingerprint),
   CONSTRAINT night_quarantine_broker_check CHECK (broker IN ('kafka', 'rabbitmq')),
   CONSTRAINT night_quarantine_reason_check CHECK
