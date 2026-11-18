@@ -23,6 +23,19 @@ public final class NightRabbitMQ implements AutoCloseable {
     private Connection connection;
     private Channel channel;
     private String queue;
+    private final String queueOverride;
+
+    public NightRabbitMQ() {
+        this(null);
+    }
+
+    /** Explicit queue for dedicated consumers/tests; default reads NIGHT_RABBITMQ_QUEUE. */
+    public NightRabbitMQ(String queueOverride) {
+        if (queueOverride != null
+                && !queueOverride.matches("[A-Za-z][A-Za-z0-9_.-]{0,63}"))
+            throw new IllegalArgumentException("Invalid RabbitMQ queue name");
+        this.queueOverride = queueOverride;
+    }
 
     public static void validateUri(String raw, boolean testLoopback) {
         if (raw == null || raw.isBlank()) throw new IllegalArgumentException("Missing RabbitMQ URL");
@@ -41,7 +54,8 @@ public final class NightRabbitMQ implements AutoCloseable {
         if (channel != null && channel.isOpen()) return 1;
         String uri = System.getenv("NIGHT_RABBITMQ_URL");
         validateUri(uri, "true".equals(System.getenv("NIGHT_RABBITMQ_ALLOW_INSECURE_LOOPBACK")));
-        String configured = System.getenv().getOrDefault("NIGHT_RABBITMQ_QUEUE", "night_events");
+        String configured = queueOverride != null
+                ? queueOverride : System.getenv().getOrDefault("NIGHT_RABBITMQ_QUEUE", "night_events");
         if (!configured.matches("[A-Za-z][A-Za-z0-9_.-]{0,63}"))
             throw new IllegalArgumentException("Invalid RabbitMQ queue name");
         ConnectionFactory factory = new ConnectionFactory();
