@@ -43,3 +43,5 @@ The result is `{valid: 1|0, errors: ["profile.city:required", "items[0].sku:type
 **Resource limits:** maximum 128 fields per object, 64 rules per object, 256 rules per schema, 8 levels of nesting, 256 allowed array elements, and 64 errors per call. A rule exceeding these limits or containing invalid types fails closed. An oversized nested object or array reports a validation error instead of traversing its contents.
 
 **Boundary:** Schema definitions must be trusted source code, not arbitrary HTTP input. Validate before entity construction, SQL, or business logic. This is not an ORM, automatic HTTP binding layer, Bean Validation equivalent, cross-field validator, or protection against malicious input when applications skip the validation call.
+
+For JSON message validation at the Kafka/RabbitMQ ingestion boundary using the same nested field rules, see [Night message schemas](message-schemas.md). This opt-in integration uses strict JSON parsing and durable poison quarantine; it does not turn Night's rule grammar into the JSON Schema standard.
