@@ -63,3 +63,7 @@ Run it behind a separate HTTPS reverse proxy, with the OW port bound privately o
 ## Outstanding 1.0 release conditions
 
 The image, Compose stack and manifests must pass build, functional TLS/identity tests, restore drills, soak/load tests, graceful-shutdown checks, upgrade/rollback rehearsals, SBOM/signature verification, and independent security review. See issue #3.
+
+## Dedicated outbox worker
+
+Night also provides an independently supervised PostgreSQL outbox dispatcher that publishes to a single configured Kafka or RabbitMQ broker. Read [outbox worker setup, lease policy and failure model](outbox-dispatcher.md). A reference systemd unit is at [`deploy/night-outbox.service`](../deploy/night-outbox.service). Apply migrations first; set `NIGHT_OUTBOX_BROKER` and broker credentials on the worker, not the public web process. Never deploy Kafka and RabbitMQ dispatchers against the same outbox table without a destination-routing migration.
