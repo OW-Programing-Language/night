@@ -2,14 +2,14 @@
 
 Night's standalone [consumer inbox worker](inbox.md) now persists **malformed Kafka and RabbitMQ envelopes** in PostgreSQL before advancing a Kafka group offset or ACKing an AMQP delivery. This avoids one missing event ID blocking an entire consumer group or queue indefinitely.
 
-This milestone quarantines **transport-envelope violations** only: missing/invalid event IDs, null payloads, and payloads exceeding the normal **256 KiB** inbox limit. Night does **not** interpret JSON schemas or automatically detect business-level poison messages; that work remains in the OW application or a future schema-aware consumer.
+This milestone quarantines **transport-envelope violations** only: missing/invalid event IDs, null payloads, and payloads exceeding the normal **256 KiB** inbox limit. With `NIGHT_CONSUMER_SCHEMAS_FILE` configured, Night additionally rejects malformed JSON and bodies failing [per-topic Night message rules](message-schemas.md). Without that opt-in, only transport-envelope violations are quarantined. This is not a general JSON Schema or business-logic validation engine.
 
 ## Migration / storage
 
 Apply Flyway `V7__night_broker_quarantine.sql` before upgrading the consumer worker. The `night_broker_quarantine` table records:
 
 - `inbox_namespace`, `broker` (`kafka` or `rabbitmq`), `topic`, and a SHA-256 `fingerprint` of the broker message identity
-- Fixed `reason_code`: `INVALID_EVENT_ID`, `INVALID_PAYLOAD`, or `PAYLOAD_TOO_LARGE`
+- Fixed `reason_code`: `INVALID_EVENT_ID`, `INVALID_PAYLOAD`, `PAYLOAD_TOO_LARGE`, plus `INVALID_JSON` and `SCHEMA_VIOLATION` after Flyway V8
 - `original_event_id`, `payload` (nullable), first/last-seen timestamps, and redelivery count
 
 **Data protection:** Quarantine contains the original message body and may contain sensitive information. Restrict SELECT access to trained operators, implement retention and backup encryption, and do not expose it through public web routes or application metrics. Runtime worker logs should report only counts/statuses, not payloads.
@@ -50,3 +50,5 @@ Do not directly edit Kafka offsets or force ACKs when PostgreSQL persistence has
 ## Validation evidence / limitations
 
 Real PostgreSQL and broker integration tests cover missing Kafka keys, missing RabbitMQ message IDs, subsequent valid-message progress, unacknowledged database failures, duplicate redelivery after lost ACK, and reconnection via a new consumer process. They do not certify a real multi-node Kafka/RabbitMQ cluster, network partition healing, broker certificate rotation, business payload schema validation, recovery at scale, or throughput SLOs. Those items remain unchecked in [the 1.0 roadmap](https://github.com/OW-Programing-Language/night/issues/3).
+
+**Schema-aware extension (PR #15):** Deploy Flyway V8, install local versioned topic rules and set `NIGHT_CONSUMER_SCHEMAS_FILE` to enable opt-in JSON/schema quarantine. See [message schemas](message-schemas.md) for strict topic matching, configuration failure behavior and rollout hazards.
