@@ -27,6 +27,7 @@ It does **not** run Spring Boot or require Java/Spring APIs in OW source.
 | Night Kafka | TLS-enabled producer, consumer groups, explicit offset ACK and restart redelivery | `src/modules/messaging/NightKafka.ow` + `platform/` |
 | Night Inbox | Supervised Kafka/RabbitMQ → PostgreSQL intake, deduplication, application retries and dead letters | `src/modules/messaging/NightInbox.ow` + `platform/` |
 | Night Broker Quarantine | PostgreSQL-backed malformed-envelope capture before Kafka/RabbitMQ ACK | `platform/` + `docs/broker-quarantine.md` |
+| Night Message Schemas | Opt-in per-topic JSON rules, malformed JSON/schema quarantine before ACK | `platform/` + `docs/message-schemas.md` |
 | Night Outbox Dispatcher | Separate worker for PostgreSQL outbox → Kafka or RabbitMQ, retries, dead letters | `platform/.../NightOutboxWorker.java` + `docs/outbox-dispatcher.md` |
 | Night Validation | Input guards | `src/modules/validation/` |
 | Night Test | Compiler checks, lifecycle tests, secured HTTP+SQL tests | `tests/` + GitHub Actions |
@@ -94,7 +95,7 @@ security and JDBC rather than unsecured application-level helper stubs.
 [Bookstore example](examples/bookstore/README.md) ·
 [Deployment templates](docs/deployment.md) · [Redis cache](docs/redis.md) ·
 [Credential store](docs/credentials.md) · [OpenAPI](docs/openapi.md) · [SMTP Mail](docs/mail.md) ·
-[Scheduler](docs/scheduler.md) · [RabbitMQ](docs/rabbitmq.md) · [Redis Streams](docs/redis-streams.md) · [Kafka](docs/kafka.md) · [Inbox](docs/inbox.md) · [Broker Quarantine](docs/broker-quarantine.md) · [Outbox Worker](docs/outbox-dispatcher.md) · [Validation](docs/validation.md) ·
+[Scheduler](docs/scheduler.md) · [RabbitMQ](docs/rabbitmq.md) · [Redis Streams](docs/redis-streams.md) · [Kafka](docs/kafka.md) · [Inbox](docs/inbox.md) · [Broker Quarantine](docs/broker-quarantine.md) · [Message Schemas](docs/message-schemas.md) · [Outbox Worker](docs/outbox-dispatcher.md) · [Validation](docs/validation.md) ·
 [Security/Data increments](docs/incremental-production.md) ·
 [Upgrade/rollback policy](docs/upgrade-policy.md) ·
 [OW starter guide](docs/guide.md)
