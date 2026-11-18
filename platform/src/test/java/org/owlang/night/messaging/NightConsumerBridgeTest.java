@@ -100,8 +100,8 @@ class NightConsumerBridgeTest {
 
     @Test void realRabbitMqIntakeAcknowledgesOnlyAfterDurableInsert() throws Exception {
         Assumptions.assumeTrue(postgres() && System.getenv("NIGHT_RABBITMQ_URL") != null);
-        String queue = System.getenv().getOrDefault("NIGHT_RABBITMQ_QUEUE", "night_events");
-        try (NightJdbc jdbc = database(); NightRabbitMQ rabbit = new NightRabbitMQ()) {
+        String queue = unique("night_inbox_queue_");
+        try (NightJdbc jdbc = database(); NightRabbitMQ rabbit = new NightRabbitMQ(queue)) {
             rabbit.open();
             String ns = unique("rabbit_");
             String id = unique("event-");
