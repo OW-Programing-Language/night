@@ -38,3 +38,5 @@ A worker can call `reject(delivery_tag, 1)` to requeue after failure. `reject(..
 - The RabbitMQ Java client cautions that polling with `basicGet` is inefficient. Production worker workloads should use a dedicated supervised consumer loop outside the OW request thread.
 
 `NightRabbitMQTest` checks URI policy and a real broker publish/poll/ACK round trip on CI. Successful CI outcome must be verified before claiming integration readiness.
+
+For a standalone RabbitMQ consumer that persists event bodies in PostgreSQL **before** manual ACK, see [Night Inbox](inbox.md). The adapter remains a polling worker; it does not run arbitrary OW callbacks.

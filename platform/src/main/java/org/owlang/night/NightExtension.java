@@ -11,6 +11,7 @@ import org.owlang.night.data.NightRedis;
 import org.owlang.night.data.NightRedisStreams;
 import org.owlang.night.http.NightHttpClient;
 import org.owlang.night.data.NightOutbox;
+import org.owlang.night.data.NightInbox;
 import org.owlang.night.security.BearerSecurity;
 import org.owlang.night.security.NightCredentialStore;
 import org.owlang.night.web.NightOpenApi;
@@ -40,6 +41,7 @@ public final class NightExtension implements RuntimeExtension {
     private final NightKafka kafka = new NightKafka();
     private final NightRepository repository = new NightRepository(jdbc);
     private final NightOutbox outbox = new NightOutbox(jdbc);
+    private final NightInbox inbox = new NightInbox(jdbc);
     private final NightMetrics metrics = new NightMetrics();
     private final NightCache cache = new NightCache();
     private final NightRedis redis = new NightRedis();
@@ -211,6 +213,34 @@ public final class NightExtension implements RuntimeExtension {
                 arity(operation, args, 6);
                 yield repository.updateVersioned(string(args, 0), string(args, 1),
                         string(args, 2), args.get(3), args.get(4), integer(args, 5));
+            }
+            case "night.inbox.accept" -> {
+                arity(operation, args, 4);
+                yield inbox.accept(string(args, 0), string(args, 1),
+                        string(args, 2), string(args, 3));
+            }
+            case "night.inbox.claim" -> {
+                arity(operation, args, 4);
+                yield inbox.claim(string(args, 0), string(args, 1),
+                        integer(args, 2), integer(args, 3));
+            }
+            case "night.inbox.ack" -> {
+                arity(operation, args, 4);
+                yield inbox.acknowledge(string(args, 0), string(args, 1),
+                        string(args, 2), string(args, 3));
+            }
+            case "night.inbox.fail" -> {
+                arity(operation, args, 6);
+                yield inbox.fail(string(args, 0), string(args, 1), string(args, 2),
+                        string(args, 3), integer(args, 4), integer(args, 5));
+            }
+            case "night.inbox.replay_dead" -> {
+                arity(operation, args, 3);
+                yield inbox.replayDead(string(args, 0), string(args, 1), string(args, 2));
+            }
+            case "night.inbox.reap" -> {
+                arity(operation, args, 2);
+                yield inbox.deadLetterExpired(string(args, 0), integer(args, 1));
             }
             case "night.outbox.enqueue" -> {
                 arity(operation, args, 3);

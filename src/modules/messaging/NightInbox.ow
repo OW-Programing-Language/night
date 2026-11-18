@@ -1,0 +1,31 @@
+# Durable PostgreSQL inbox for at-least-once broker event processing.
+# A dedicated NightConsumerWorker ingests into the inbox before broker ACK.
+# OW application logic claims rows and uses its own NightData transaction.
+class NightInbox:
+  fn new():
+    return: 0
+
+  # 1 for a new record, 0 for a duplicate (namespace, topic, event_id).
+  fn accept(namespace, topic, event_id, json_body):
+    return: extension("night.inbox.accept", namespace, topic, event_id, json_body)
+
+  # Returns up to one row: [{inbox_namespace, topic, event_id, payload, attempts}].
+  fn claim(namespace, worker_id, lease_seconds, max_attempts):
+    return: extension("night.inbox.claim", namespace, worker_id, lease_seconds, max_attempts)
+
+  # The ACK should happen inside the same database transaction as the
+  # application's state mutation, before NightData.commit().
+  fn acknowledge(namespace, topic, event_id, worker_id):
+    return: extension("night.inbox.ack", namespace, topic, event_id, worker_id)
+
+  # Reschedule processing or move exhausted events to DEAD.
+  fn fail(namespace, topic, event_id, worker_id, retry_seconds, max_attempts):
+    return: extension("night.inbox.fail", namespace, topic, event_id, worker_id, retry_seconds, max_attempts)
+
+  # Operator-only recovery. Never automatically replay poison records forever.
+  fn replay_dead(namespace, topic, event_id):
+    return: extension("night.inbox.replay_dead", namespace, topic, event_id)
+
+  # For worker observability; claim() automatically reaps expired exhausted leases.
+  fn reap_expired(namespace, max_attempts):
+    return: extension("night.inbox.reap", namespace, max_attempts)

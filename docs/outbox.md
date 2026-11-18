@@ -45,3 +45,5 @@ acknowledgement. Downstream handlers must deduplicate on event ID.
 - Kafka and RabbitMQ end-to-end dispatcher integration tests are added in PR #12; production TLS/failover and throughput acceptance remain open. Redis Streams is not yet a dispatcher target.
 
 This is an **increment**, not the completed roadmap outbox + replay + broker goal.
+
+Night now also provides a separate [consumer inbox](inbox.md) for durable broker-to-PostgreSQL delivery and explicit application processing acknowledgements. It does not change the outbox producer's at-least-once guarantees or remove the need for business-level idempotency.
