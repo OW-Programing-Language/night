@@ -13,6 +13,7 @@ This matrix describes features **in the code**, not aspirational Spring Data com
 | Pagination / optimistic update | Constrained table helper | Constrained table helper | Not applicable | Not implemented | Not implemented |
 | Durable outbox | PostgreSQL-specific lease/replay | Not supported | Not supported | Not implemented | Not implemented |
 | TTL cache | Application-level SQL only | Not a cache | Yes, 1–86400s | Not implemented | Not implemented |
+| Stream consumer groups | Not a JDBC capability | Not implemented | XADD, XREADGROUP, XACK, XAUTOCLAIM (experimental) | Not implemented | Not implemented |
 | Namespaced keyspace | Schema/table policy is caller's responsibility | N/A | Application-wide prefix | Not implemented | Not implemented |
 | Multi-tenant enforcement | Not implemented | Not implemented | Not implemented | Not implemented | Not implemented |
 | Production failover tests | Not complete | Not applicable | Not complete | Not implemented | Not implemented |
@@ -21,7 +22,7 @@ This matrix describes features **in the code**, not aspirational Spring Data com
 
 - MongoDB adapter with typed document mapping, schema validation, transactions where supported, secondary indexes, retries and authentication/TLS.
 - Elasticsearch/OpenSearch adapter with index lifecycle, safe typed queries, mapping changes, bulk indexing, pagination and cluster failure handling.
-- Redis Streams/consumer groups and keyspace invalidation/instrumentation, distinct from basic Redis cache operations.
+- Redis Streams basic consumer groups are implemented as a distinct messaging adapter; production retention, retry/dead-letter, supervised workers, failover, ACL/isolation and keyspace invalidation remain open.
 - Capability-negotiation API so features unsupported by a backend fail explicitly rather than silently degrading.
 - Real-engine integration tests, version support policy and documented migration/failover behavior.
 
