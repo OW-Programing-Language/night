@@ -1,6 +1,5 @@
 package org.owlang.night.messaging;
 
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -57,8 +56,17 @@ public final class NightOutboxWorker {
         // Use a unique lease owner per process restart to prevent stale ACK.
         String worker = "night-" + UUID.randomUUID().toString().replace("-", "");
         AtomicBoolean running = new AtomicBoolean(true);
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> running.set(false),
-                "night-outbox-shutdown"));
+        Thread workerThread = Thread.currentThread();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            running.set(false);
+            // Give an in-flight publish/ACK a chance to complete; otherwise
+            // its lease will expire and another worker will retry.
+            try {
+                workerThread.join(70_000);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+        }, "night-outbox-shutdown"));
 
         // Never call Flyway migrations from the background worker; run them
         // during deployment before this service starts.
