@@ -17,15 +17,16 @@ or Java libraries run unchanged inside OW.
 | `night-actuator` | Spring Boot Actuator | Readiness, health, low-cardinality HTTP metrics, existing module inspection | Metrics are per-process; protect admin endpoints |
 | `night-config` | Spring Config | Environment-based configuration, required-variable checks | Secret rotation and hot reload not included |
 | `night-cache` | Spring Cache | Bounded process-local TTL cache | Not a distributed Redis cache |
-| `night-data-redis` | Spring Data Redis | Shared Redis string cache with TLS, TTL and namespace prefixes | No pub/sub, tenant isolation, Redis Streams or failover tests |
+| `night-data-redis` | Spring Data Redis | Shared Redis string cache with TLS, TTL and namespace prefixes | No pub/sub, tenant isolation or failover tests |
 | `night-http-client` | RestClient / WebClient | Allowlisted outbound HTTPS GET, timeouts, body limits, non-following redirects, bounded retry | DNS rebinding not fully blocked; production egress gateway required |
 | `night-outbox` | Transactional outbox pattern | PostgreSQL leases, dead-letter state and explicit replay | No automatic outbox-to-broker dispatcher |
 | `night-scheduler` | Spring Task / Quartz | PostgreSQL leased one-off/repeating jobs, manual ACK, retry and replay | No cron, supervised worker or automatic safe OW callbacks |
-| `night-rabbitmq` | Spring AMQP | Durable queue publishing with confirmations, poll and manual ACK, TLS policy | No consumer supervision, broker retry policy or Kafka/Streams connector |
+| `night-rabbitmq` | Spring AMQP | Durable queue publishing with confirmations, poll and manual ACK, TLS policy | No consumer supervision or broker retry policy |
+| `night-redis-streams` | Spring Data Redis Streams | Redis consumer groups, bounded publish/poll, manual ACK and idle pending recovery | No supervised workers, delayed retries, DLQ or cluster failover |
 | `night-credentials` | Spring Security PasswordEncoder/UserDetails | JDBC-backed bcrypt passwords, 5-attempt lockout and one-time reset primitives | No public anti-enumeration reset service, session invalidation, MFA or completed IdP integration |
 | `night-openapi` | springdoc-openapi | Explicit route metadata and OpenAPI 3.0 spec generation | No schema introspection, typed request/response contracts or GraphQL |
 | `night-mail` | Spring Mail | SMTP STARTTLS/SMTPS with plain-text templates and audit table | No live SMTP integration/queue/bounce handling; handoff is not delivery |
-| `night-validation` | Bean Validation | Primitive guards plus strict flat-object schema and unknown-field denial | No nested schemas, auto binding or Jakarta Bean Validation metadata |
+| `night-validation` | Bean Validation | Primitive guards, bounded nested object/array schema and unknown-field denial | No automatic HTTP binding, cross-field constraints or Jakarta Bean Validation metadata |
 | `night-test` | Spring Boot Test | Java unit tests, OW type preflight, live auth/SQL/HTTP tests | Integration coverage, not formal verification |
 
 ## Not implemented yet (explicitly planned, not placeholders)
@@ -34,8 +35,8 @@ or Java libraries run unchanged inside OW.
 |---|---|---|
 | `night-security-oauth2` | Spring Security OAuth2 | OIDC discovery, authorization code+PKCE, session/cookie security, refresh tokens and real JWKS rotation testing |
 | `night-data-orm` | Spring Data JPA / Hibernate | Typed entities, repositories, relationship mappings, lazy loading, query derivation |
-| `night-data-redis-streams` | Spring Data Redis | Streams/pub-sub, consumer-group semantics, cross-node invalidation, cluster recovery |
-| `night-messaging-full` | Spring AMQP / Kafka | Durable retry worker, consumer groups, Kafka, Redis Streams and dead-letter transport |
+| `night-data-redis-streams-full` | Spring Data Redis | Redis pub/sub, supervised stream workers, DLQ, retention, cross-node invalidation and cluster recovery |
+| `night-messaging-full` | Spring AMQP / Kafka | Durable retry workers, Kafka consumer groups, broker-to-outbox dispatch and dead-letter transport |
 | `night-scheduling-full` | Spring Task / Quartz | Cron/calendar scheduling, safe OW worker callbacks, persistent misfire rules and distributed fencing |
 | `night-mail-delivery` | Spring Mail | Durable retries, live provider TLS testing, bounce/delivery webhooks, template HTML escaping |
 | `night-graphql` | Spring GraphQL | Query parser, validation, resolvers, auth boundaries |
