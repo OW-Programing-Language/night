@@ -35,7 +35,7 @@ jobs:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
           ref: 3be777a7ee2c9204ebe653d89e749e0dcfe4b831
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
