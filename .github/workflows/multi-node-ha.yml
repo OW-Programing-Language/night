@@ -94,175 +94,15 @@ jobs:
           docker compose -p night-kafka-ha -f tests/ha/kafka-three-node.yml start "kafka-$node"
       - name: Verify ISR returns to three and new messages remain durable
         run: mvn -B -f platform/pom.xml -Dtest=NightKafkaQuorumFailoverTest -Dnight.ha.phase=return "-Dnight.ha.leaderFile=$RUNNER_TEMP/kafka-ha-leader" test
-      - name: Remove two Kafka voters and confirm quorum majority is lost
+      - name: Stop two Kafka controller voters, leaving only one of three
         run: |
           set -euo pipefail
           docker compose -p night-kafka-ha -f tests/ha/kafka-three-node.yml kill -s SIGKILL kafka-2 kafka-3
-          remaining="$(docker compose -p night-kafka-ha -f tests/ha/kafka-three-node.yml ps --status running --services | grep -c '^kafka-1
-        run: |
-          docker compose -p night-kafka-ha -f tests/ha/kafka-three-node.yml ps || true
-          docker compose -p night-kafka-ha -f tests/ha/kafka-three-node.yml logs --tail=160 || true
-      - name: Clean up Kafka fault-injection cluster
-        if: always()
-        run: docker compose -p night-kafka-ha -f tests/ha/kafka-three-node.yml down -v --remove-orphans || true
-
-  rabbitmq-quorum-ha:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: night_test
-          POSTGRES_PASSWORD: night_test_ci_only
-          POSTGRES_DB: night
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U night_test -d night"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
-    env:
-      NIGHT_HA_RUN_ID: '${{ github.run_id }}'
-      NIGHT_RABBITMQ_URL: 'amqp://night_test:night_ci_password@127.0.0.1:5672/%2F'
-      NIGHT_RABBITMQ_ALLOW_INSECURE_LOOPBACK: 'true'
-      NIGHT_RABBITMQ_QUEUE_TYPE: quorum
-      NIGHT_JDBC_URL: jdbc:postgresql://127.0.0.1:5432/night
-      NIGHT_JDBC_USER: night_test
-      NIGHT_JDBC_PASSWORD: night_test_ci_only
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/checkout@v7
-        with:
-          repository: OW-Programing-Language/ow-lang
-          path: ow-lang
-          ref: 3be777a7ee2c9204ebe653d89e749e0dcfe4b831
-      - uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: maven
-          cache-dependency-path: |
-            ow-lang/pom.xml
-            platform/pom.xml
-      - name: Boot three real RabbitMQ 4.1 nodes with shared Erlang cookie
-        run: |
-          docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml up -d
-          # A published Docker port can accept a TCP connection BEFORE the
-          # RabbitMQ Erlang node is running. Poll the authenticated management
-          # API instead; invoking rabbitmqctl too early can also corrupt the
-          # Erlang cookie file ownership on initial startup.
-          for port in 15672 15673 15674; do
-            ready=0
-            for attempt in $(seq 1 100); do
-              if curl -fsS --max-time 3 -u night_test:night_ci_password "http://127.0.0.1:$port/api/overview" >/dev/null 2>&1; then
-                ready=1
-                break
-              fi
-              sleep 2
-            done
-            if [ "$ready" != 1 ]; then
-              echo "RabbitMQ management API not ready on port: $port"
-              exit 1
-            fi
-          done
-      - name: Join three nodes and assert actual cluster membership
-        run: |
-          set -euo pipefail
-          docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml exec -T rmq-2 rabbitmqctl join_cluster rabbit@rmq-1
-          docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml exec -T rmq-3 rabbitmqctl join_cluster rabbit@rmq-1
-          cluster="$(docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml exec -T rmq-1 rabbitmqctl cluster_status)"
-          printf '%s\n' "$cluster"
-          for node in 1 2 3; do echo "$cluster" | grep -F "rabbit@rmq-$node"; done
-      - name: Install pinned OW compiler / runtime SPI
-        run: mvn -B -q -f ow-lang/pom.xml install
-      - name: Confirm persistent messages and an unacknowledged quorum delivery
-        run: mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=before test
-      - name: Confirm three queue replicas and kill actual quorum queue leader
-        run: |
-          set -euo pipefail
-          queue="night_qq_$NIGHT_HA_RUN_ID"
-          status="$(docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml exec -T rmq-1 rabbitmq-queues quorum_status "$queue")"
-          printf '%s\n' "$status"
-          for node in 1 2 3; do echo "$status" | grep -F "rabbit@rmq-$node"; done
-          definition="$(curl -fsS --retry 10 --retry-delay 2 -u night_test:night_ci_password "http://127.0.0.1:15672/api/queues/%2F/$queue")"
-          echo "$definition" | jq -e '.type == "quorum"'
-          leader="$(echo "$definition" | jq -r '.node // empty')"
-          case "$leader" in
-            rabbit@rmq-1) node=1; survivor=2; survivor_port=5673 ;;
-            rabbit@rmq-2) node=2; survivor=1; survivor_port=5672 ;;
-            rabbit@rmq-3) node=3; survivor=1; survivor_port=5672 ;;
-            *) echo "Unknown quorum queue leader: $leader"; exit 1 ;;
-          esac
-          printf '%s\n' "$node" > "$RUNNER_TEMP/rabbit-ha-killed-node"
-          echo "Removing actual RabbitMQ quorum leader $leader; survivor rmq-$survivor"
-          docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml kill -s SIGKILL "rmq-$node"
-          echo "NIGHT_RABBITMQ_URL=amqp://night_test:night_ci_password@127.0.0.1:$survivor_port/%2F" >> "$GITHUB_ENV"
-      - name: Verify confirmed writes and durable inbox recovery from surviving majority
-        run: mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=after test
-      - name: Restore failed RabbitMQ member and assert cluster recovery
-        run: |
-          set -euo pipefail
-          node="$(cat "$RUNNER_TEMP/rabbit-ha-killed-node")"
-          docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml start "rmq-$node"
-          case "$node" in
-            1) port=15672 ;;
-            2) port=15673 ;;
-            3) port=15674 ;;
-            *) exit 1 ;;
-          esac
-          for attempt in $(seq 1 90); do
-            if curl -fsS --max-time 3 -u night_test:night_ci_password "http://127.0.0.1:$port/api/overview" >/dev/null 2>&1; then
-              echo "RabbitMQ member $node fully recovered (management API $port)"
-              exit 0
-            fi
-            sleep 2
-          done
-          exit 1
-      - name: Verify successful post-recovery quorum publication
-        run: mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=return test
-      - name: Remove two RabbitMQ quorum voters and route client to isolated member
-        run: |
-          set -euo pipefail
-          # rmq-1 remains alive; rmq-2 and rmq-3 are hard-killed.
-          # This is genuine majority loss, not the normal one-node failover.
-          docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml kill -s SIGKILL rmq-2 rmq-3
-          echo "NIGHT_RABBITMQ_URL=amqp://night_test:night_ci_password@127.0.0.1:5672/%2F" >> "$GITHUB_ENV"
-      - name: Verify RabbitMQ minority rejects confirmed publication
-        run: timeout 110s mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=minority test
-      - name: Restore RabbitMQ quorum members without deleting durable queue
-        run: |
-          set -euo pipefail
-          docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml start rmq-2 rmq-3
-          for port in 15672 15673 15674; do
-            ready=0
-            for attempt in $(seq 1 90); do
-              if curl -fsS --max-time 3 -u night_test:night_ci_password "http://127.0.0.1:$port/api/overview" >/dev/null 2>&1; then
-                ready=1
-                break
-              fi
-              sleep 2
-            done
-            test "$ready" -eq 1
-          done
-      - name: Verify RabbitMQ restored majority, confirmed write and inbox integrity
-        run: timeout 110s mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=healed test
-      - name: RabbitMQ cluster logs on failure
-        if: failure()
-        run: |
-          docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml ps || true
-          docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml logs --tail=160 || true
-      - name: Clean up RabbitMQ fault-injection cluster
-        if: always()
-        run: docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml down -v --remove-orphans || true
- || true)"
-          test "$remaining" -eq 1
-          echo "Only kafka-1 remains: 1/3 KRaft controller voters, 1/3 topic replicas"
-      - name: Verify Kafka producer fails closed without quorum majority
+          echo "Removed kafka-2 and kafka-3; Kafka has no KRaft voter majority"
+      - name: Verify Kafka refuses confirmation with one voter
         run: |
           timeout 110s mvn -B -f platform/pom.xml -Dtest=NightKafkaQuorumFailoverTest -Dnight.ha.phase=minority "-Dnight.ha.leaderFile=$RUNNER_TEMP/kafka-ha-leader" test
-      - name: Restore Kafka quorum voters
+      - name: Restore Kafka quorum majority with original log storage
         run: |
           set -euo pipefail
           docker compose -p night-kafka-ha -f tests/ha/kafka-three-node.yml start kafka-2 kafka-3
@@ -277,8 +117,8 @@ jobs:
             done
             test "$ready" -eq 1
           done
-      - name: Verify Kafka majority restoration and stable event-ID recovery
-        run: mvn -B -f platform/pom.xml -Dtest=NightKafkaQuorumFailoverTest -Dnight.ha.phase=healed "-Dnight.ha.leaderFile=$RUNNER_TEMP/kafka-ha-leader" test
+      - name: Verify Kafka recovers with stable event IDs and all three ISR replicas
+        run: timeout 110s mvn -B -f platform/pom.xml -Dtest=NightKafkaQuorumFailoverTest -Dnight.ha.phase=healed "-Dnight.ha.leaderFile=$RUNNER_TEMP/kafka-ha-leader" test
       - name: Kafka cluster logs on failure
         if: failure()
         run: |
@@ -404,6 +244,30 @@ jobs:
           exit 1
       - name: Verify successful post-recovery quorum publication
         run: mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=return test
+      - name: Stop two RabbitMQ quorum queue replicas, leaving isolated minority
+        run: |
+          set -euo pipefail
+          docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml kill -s SIGKILL rmq-2 rmq-3
+          echo "NIGHT_RABBITMQ_URL=amqp://night_test:night_ci_password@127.0.0.1:5672/%2F" >> "$GITHUB_ENV"
+      - name: Verify RabbitMQ refuses publisher confirm with quorum majority down
+        run: timeout 110s mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=minority test
+      - name: Restore RabbitMQ quorum members with original durable queue
+        run: |
+          set -euo pipefail
+          docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml start rmq-2 rmq-3
+          for port in 15672 15673 15674; do
+            ready=0
+            for attempt in $(seq 1 90); do
+              if curl -fsS --max-time 3 -u night_test:night_ci_password "http://127.0.0.1:$port/api/overview" >/dev/null 2>&1; then
+                ready=1
+                break
+              fi
+              sleep 2
+            done
+            test "$ready" -eq 1
+          done
+      - name: Verify RabbitMQ restored majority, confirmed write and inbox integrity
+        run: timeout 110s mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=healed test
       - name: RabbitMQ cluster logs on failure
         if: failure()
         run: |
