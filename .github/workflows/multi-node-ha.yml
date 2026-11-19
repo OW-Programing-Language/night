@@ -146,17 +146,20 @@ jobs:
       - name: Boot three real RabbitMQ 4.1 nodes with shared Erlang cookie
         run: |
           docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml up -d
-          for service in rmq-1 rmq-2 rmq-3; do
+          # Do NOT run rabbitmq-diagnostics before the broker has opened
+          # AMQP: an early Erlang CLI can race cookie-file ownership and
+          # crash a fresh node with .erlang.cookie EACCES.
+          for port in 5672 5673 5674; do
             ready=0
             for attempt in $(seq 1 100); do
-              if docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml exec -T "$service" rabbitmq-diagnostics -q ping >/dev/null 2>&1; then
+              if timeout 2 bash -c "echo >/dev/tcp/127.0.0.1/$port" 2>/dev/null; then
                 ready=1
                 break
               fi
               sleep 2
             done
             if [ "$ready" != 1 ]; then
-              echo "RabbitMQ node unavailable: $service"
+              echo "RabbitMQ AMQP port unavailable: $port"
               exit 1
             fi
           done
@@ -199,9 +202,15 @@ jobs:
           set -euo pipefail
           node="$(cat "$RUNNER_TEMP/rabbit-ha-killed-node")"
           docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml start "rmq-$node"
+          case "$node" in
+            1) port=5672 ;;
+            2) port=5673 ;;
+            3) port=5674 ;;
+            *) exit 1 ;;
+          esac
           for attempt in $(seq 1 90); do
-            if docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml exec -T "rmq-$node" rabbitmq-diagnostics -q ping >/dev/null 2>&1; then
-              echo "RabbitMQ member $node returned"
+            if timeout 2 bash -c "echo >/dev/tcp/127.0.0.1/$port" 2>/dev/null; then
+              echo "RabbitMQ member $node returned on AMQP port $port"
               exit 0
             fi
             sleep 2
