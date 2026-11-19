@@ -73,9 +73,10 @@ public final class NightRabbitMQ implements AutoCloseable {
             factory.setAutomaticRecoveryEnabled(true);
             factory.setNetworkRecoveryInterval(5_000);
             factory.setConnectionTimeout(5_000);
-            // Queue declarations/RPCs can stall when a three-member quorum
-            // loses two voters. Bound socket reads so callers fail closed.
-            factory.setSocketTimeout(10_000);
+            // Bound queue RPC reads after quorum loss, but keep the timeout
+            // longer than the requested 30-second heartbeat interval so
+            // healthy idle connections are not disconnected prematurely.
+            factory.setSocketTimeout(35_000);
             factory.setRequestedHeartbeat(30);
             if (uri.startsWith("amqps://")) factory.enableHostnameVerification();
             connection = factory.newConnection("night-platform");
