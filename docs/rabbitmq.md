@@ -42,3 +42,5 @@ A worker can call `reject(delivery_tag, 1)` to requeue after failure. `reject(..
 For a standalone RabbitMQ consumer that persists event bodies in PostgreSQL **before** manual ACK, see [Night Inbox](inbox.md). The adapter remains a polling worker; it does not run arbitrary OW callbacks.
 
 The standalone consumer bridge can quarantine missing/invalid RabbitMQ message IDs before manual ACK; see [broker quarantine](broker-quarantine.md). An oversized-to-retain poison body remains unacknowledged.
+
+**Opt-in replicated quorum queues:** set `NIGHT_RABBITMQ_QUEUE_TYPE=quorum` to declare a three-member quorum queue on an existing cluster of at least three nodes. The default remains `classic`. Existing queue types cannot be modified in place. The dedicated [three-node leader-loss CI lab](three-node-ha.md) verifies durable, confirmed delivery through a surviving broker and tests application inbox deduplication; it is not production HA certification.
