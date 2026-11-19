@@ -51,6 +51,11 @@ public final class NightConsumerWorker {
             rabbitQueue = NightInbox.topic(env.getOrDefault("NIGHT_RABBITMQ_QUEUE", "night_events"));
         }
 
+        // A DLQ is opt-in and must never be the same source topic/queue.
+        // Resolve the destination before opening the database or broker.
+        String dlqDestination = NightPoisonDlq.configuredDestination(env, broker,
+                "kafka".equals(broker) ? kafkaTopic : rabbitQueue);
+
         AtomicBoolean running = new AtomicBoolean(true);
         Thread workerThread = Thread.currentThread();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -63,7 +68,10 @@ public final class NightConsumerWorker {
         // migrate an active application's database at startup.
         try (NightJdbc jdbc = new NightJdbc();
              NightKafka kafka = new NightKafka();
-             NightRabbitMQ rabbit = new NightRabbitMQ()) {
+             NightRabbitMQ rabbit = new NightRabbitMQ();
+             NightKafka kafkaDlq = new NightKafka();
+             NightRabbitMQ rabbitDlq = new NightRabbitMQ(
+                     "rabbitmq".equals(broker) ? dlqDestination : null)) {
             jdbc.open();
             NightConsumerBridge.Source source;
             if ("kafka".equals(broker)) {
@@ -73,9 +81,19 @@ public final class NightConsumerWorker {
                 rabbit.open();
                 source = NightConsumerBridge.rabbitMq(rabbit, rabbitQueue);
             }
+            NightPoisonDlq.Publisher poisonPublisher = null;
+            if (dlqDestination != null) {
+                if ("kafka".equals(broker)) {
+                    kafkaDlq.open();
+                    poisonPublisher = NightPoisonDlq.kafka(kafkaDlq, dlqDestination);
+                } else {
+                    rabbitDlq.open();
+                    poisonPublisher = NightPoisonDlq.rabbitMq(rabbitDlq, dlqDestination);
+                }
+            }
             NightConsumerBridge bridge = new NightConsumerBridge(
                     new NightInbox(jdbc), new NightBrokerQuarantine(jdbc),
-                    source, namespace, schemas);
+                    source, namespace, schemas, poisonPublisher);
             System.out.println("Night consumer worker started (transport=" + broker
                     + ", namespace=" + namespace + ")");
             while (running.get() && !Thread.currentThread().isInterrupted()) {
