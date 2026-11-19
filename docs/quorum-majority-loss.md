@@ -32,8 +32,11 @@ The existing `.github/workflows/multi-node-ha.yml` Kafka job first
 successfully runs its leader-loss test, restores three ISR replicas and
 ingests events 1–5.
 
-CI then uses `docker compose kill -s SIGKILL kafka-2 kafka-3`, retaining
-only node 1. In a fresh Maven/JVM phase, Night publishes event 6 with
+CI first identifies the **current actual topic partition leader** after the
+previous failover; it then SIGKILLs the other two brokers/controllers,
+leaving that leader reachable but isolated from a controller quorum and
+short of the required two in-sync replicas. In a fresh Maven/JVM phase,
+Night publishes event 6 with
 `acks=all` and idempotent producer settings. The test demands a
 **bounded failure**, because a lone broker/controller cannot establish
 KRaft majority and cannot meet min-ISR=2. It also verifies the existing
@@ -49,13 +52,16 @@ expected body.
 The existing RabbitMQ job also first completes its one-node leader-loss
 test, restores the original three-member quorum and ingests events 1–5.
 
-CI then kills `rmq-2` and `rmq-3`, leaving `rmq-1` as the only
-running node. Night's optional three-member quorum queue is declared
-on the isolated node. Either queue access or publisher-confirmation
+CI queries the RabbitMQ management API for the **current quorum queue
+leader**, kills the two followers and keeps that leader's AMQP port reachable.
+Night's optional three-member quorum queue is accessed on the minority
+leader. Either queue access or publisher-confirmation
 must fail; **a confirmed event 6 is a test failure**. No new event may
 appear in the PostgreSQL inbox.
 
-After both members restart and all authenticated RabbitMQ management
+Bounded AMQP read timeouts and channel-shutdown errors prevent queue
+operations from indefinitely hanging or falsely reporting confirmation.
+After both followers restart and all authenticated RabbitMQ management
 APIs report readiness, Night republishes the identical event ID,
 receives a confirmed publication, and verifies one valid PostgreSQL
 inbox row for event 6 and retention of all earlier events.
