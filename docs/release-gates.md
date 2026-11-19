@@ -45,3 +45,5 @@
 | Deployment end-to-end | Pending | Pending | Pending | OPEN |
 
 The GitHub roadmap in issue #3 is the authoritative feature/task checklist; this file defines the separate **release certification evidence**.
+
+**Controlled majority-loss evidence:** [three-node HA CI](three-node-ha.md) exercises two-voter process loss and later healing for Kafka and RabbitMQ. This remains a test harness, not evidence of distinct host faults, TLS traffic, network partitions or production SLO acceptance.
