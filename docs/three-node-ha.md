@@ -78,7 +78,7 @@ process.
 
 The workflow uses separate, isolated Kafka and RabbitMQ jobs. Each starts a
 disposable PostgreSQL 16 service and installs the pinned OW runtime SPI.
-The integration tests use explicit `night.ha.phase` before/after/return
+The integration tests use explicit `night.ha.phase` before/after/return/minority/healed
 values and are never intended to run against production infrastructure.
 Unique GitHub run IDs create isolated database namespaces, topics and queues.
 All broker containers are torn down in `always()` steps.
@@ -97,8 +97,8 @@ failure domains.
 
 ## Still outside the release certification gate
 
-- Real network partitions or majority loss, and detecting that a minority
-  must reject writes
+- Real network partitions where isolated processes stay alive; two-node
+  **process-termination** majority loss is exercised by [the next CI phase](quorum-majority-loss.md)
 - Recovery from physical disk failure or loss of broker log volumes
 - Kubernetes rolling upgrades, rebalance and rescheduling between hosts
 - Production TLS/SASL broker failover and certificate rotation
@@ -107,3 +107,5 @@ failure domains.
 
 See [Night 1.0 release gates](release-gates.md) and
 [the tracked roadmap](https://github.com/OW-Programing-Language/night/issues/3).
+
+The CI workflow also checks **loss of two out of three voters** with fail-closed broker confirmations and recovery using stable event IDs: see [quorum majority-loss testing](quorum-majority-loss.md). This is process termination, not a network partition.
