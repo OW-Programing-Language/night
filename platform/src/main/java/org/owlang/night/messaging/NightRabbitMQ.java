@@ -118,7 +118,9 @@ public final class NightRabbitMQ implements AutoCloseable {
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("RabbitMQ publish interrupted", ex);
-        } catch (IOException | TimeoutException ex) {
+        } catch (IOException | TimeoutException | com.rabbitmq.client.ShutdownSignalException ex) {
+            // A quorum leader can close the channel when its majority is gone.
+            // Never expose such a shutdown as a successful publication.
             throw new IllegalStateException("RabbitMQ publish unconfirmed", ex);
         }
     }
