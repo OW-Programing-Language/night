@@ -18,7 +18,7 @@ permissions:
 jobs:
   kafka-quorum-ha:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 55
     services:
       postgres:
         image: postgres:16
@@ -94,6 +94,32 @@ jobs:
           docker compose -p night-kafka-ha -f tests/ha/kafka-three-node.yml start "kafka-$node"
       - name: Verify ISR returns to three and new messages remain durable
         run: mvn -B -f platform/pom.xml -Dtest=NightKafkaQuorumFailoverTest -Dnight.ha.phase=return "-Dnight.ha.leaderFile=$RUNNER_TEMP/kafka-ha-leader" test
+      - name: Identify live Kafka partition leader before majority loss
+        run: mvn -B -f platform/pom.xml -Dtest=NightKafkaMajorityLossTest -Dnight.majority.phase=prepare "-Dnight.majority.leaderFile=$RUNNER_TEMP/kafka-majority-leader" test
+      - name: Kill both Kafka followers while retaining the current leader
+        run: |
+          set -euo pipefail
+          leader="$(cat "$RUNNER_TEMP/kafka-majority-leader")"
+          case "$leader" in 1|2|3) ;; *) exit 1 ;; esac
+          for node in 1 2 3; do
+            if [ "$node" != "$leader" ]; then
+              docker compose -p night-kafka-ha -f tests/ha/kafka-three-node.yml kill -s SIGKILL "kafka-$node"
+            fi
+          done
+          echo "KAFKA_MAJORITY_SURVIVOR=$leader" >> "$GITHUB_ENV"
+          echo "NIGHT_KAFKA_BOOTSTRAP_SERVERS=127.0.0.1:${leader}9092" >> "$GITHUB_ENV"
+      - name: Require Kafka acks=all publication failure without controller and ISR majority
+        run: mvn -B -f platform/pom.xml -Dtest=NightKafkaMajorityLossTest -Dnight.majority.phase=minority test
+      - name: Restore Kafka majority and original data replicas
+        run: |
+          set -euo pipefail
+          for node in 1 2 3; do
+            if [ "$node" != "$KAFKA_MAJORITY_SURVIVOR" ]; then
+              docker compose -p night-kafka-ha -f tests/ha/kafka-three-node.yml start "kafka-$node"
+            fi
+          done
+      - name: Verify Kafka quorum heal and stable idempotent inbox recovery
+        run: mvn -B -f platform/pom.xml -Dtest=NightKafkaMajorityLossTest -Dnight.majority.phase=healed test
       - name: Kafka cluster logs on failure
         if: failure()
         run: |
@@ -219,6 +245,50 @@ jobs:
           exit 1
       - name: Verify successful post-recovery quorum publication
         run: mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=return test
+      - name: Identify RabbitMQ quorum leader and remove both follower nodes
+        run: |
+          set -euo pipefail
+          queue="night_qq_$NIGHT_HA_RUN_ID"
+          definition="$(curl -fsS --retry 10 --retry-delay 2 -u night_test:night_ci_password "http://127.0.0.1:15672/api/queues/%2F/$queue")"
+          echo "$definition" | jq -e '.type == "quorum"'
+          leader="$(echo "$definition" | jq -r '.node // empty')"
+          case "$leader" in
+            rabbit@rmq-1) survivor=1; port=5672 ;;
+            rabbit@rmq-2) survivor=2; port=5673 ;;
+            rabbit@rmq-3) survivor=3; port=5674 ;;
+            *) echo "Unknown RabbitMQ quorum leader: $leader"; exit 1 ;;
+          esac
+          echo "RABBIT_MAJORITY_SURVIVOR=$survivor" >> "$GITHUB_ENV"
+          for node in 1 2 3; do
+            if [ "$node" != "$survivor" ]; then
+              docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml kill -s SIGKILL "rmq-$node"
+            fi
+          done
+          echo "NIGHT_RABBITMQ_URL=amqp://night_test:night_ci_password@127.0.0.1:$port/%2F" >> "$GITHUB_ENV"
+      - name: Require RabbitMQ quorum publication to fail closed without a majority
+        run: mvn -B -f platform/pom.xml -Dtest=NightRabbitMajorityLossTest -Dnight.majority.phase=minority test
+      - name: Restore both RabbitMQ followers without resetting queue storage
+        run: |
+          set -euo pipefail
+          for node in 1 2 3; do
+            if [ "$node" != "$RABBIT_MAJORITY_SURVIVOR" ]; then
+              docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml start "rmq-$node"
+            fi
+          done
+          for node in 1 2 3; do
+            case "$node" in 1) port=15672 ;; 2) port=15673 ;; 3) port=15674 ;; esac
+            ready=0
+            for attempt in $(seq 1 90); do
+              if curl -fsS --max-time 3 -u night_test:night_ci_password "http://127.0.0.1:$port/api/overview" >/dev/null 2>&1; then
+                ready=1
+                break
+              fi
+              sleep 2
+            done
+            if [ "$ready" != 1 ]; then echo "RabbitMQ node $node failed to recover"; exit 1; fi
+          done
+      - name: Verify RabbitMQ quorum heal, confirm delivery and preserve inbox dedup
+        run: mvn -B -f platform/pom.xml -Dtest=NightRabbitMajorityLossTest -Dnight.majority.phase=healed test
       - name: RabbitMQ cluster logs on failure
         if: failure()
         run: |
