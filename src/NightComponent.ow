@@ -1,4 +1,4 @@
-# Night v0.1 — public lifecycle contract for the module runtime.
+# Public lifecycle contract for the Night modular runtime.
 # Spring Modulith-inspired module boundaries, dependencies and events.
 # A negative start/register/mount result aborts boot.
 interface NightComponent:

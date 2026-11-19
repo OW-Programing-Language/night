@@ -52,3 +52,7 @@ Do not directly edit Kafka offsets or force ACKs when PostgreSQL persistence has
 Real PostgreSQL and broker integration tests cover missing Kafka keys, missing RabbitMQ message IDs, subsequent valid-message progress, unacknowledged database failures, duplicate redelivery after lost ACK, and reconnection via a new consumer process. They do not certify a real multi-node Kafka/RabbitMQ cluster, network partition healing, broker certificate rotation, business payload schema validation, recovery at scale, or throughput SLOs. Those items remain unchecked in [the 1.0 roadmap](https://github.com/OW-Programing-Language/night/issues/3).
 
 **Schema-aware extension (PR #15):** Deploy Flyway V8, install local versioned topic rules and set `NIGHT_CONSUMER_SCHEMAS_FILE` to enable opt-in JSON/schema quarantine. See [message schemas](message-schemas.md) for strict topic matching, configuration failure behavior and rollout hazards.
+
+## Broker DLQ notification (opt-in)
+
+Night can now publish a **stable fingerprint reference** to a separately configured Kafka topic or RabbitMQ queue after PostgreSQL quarantine but before source ACK. A failed DLQ publish leaves the source unacknowledged, and lost ACKs may duplicate reference notifications. See [dead-letter routing](dead-letter-routing.md). Original poison bodies remain in the quarantine table, not the broker DLQ notification.

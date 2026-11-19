@@ -40,6 +40,7 @@ public final class NightConsumerBridge {
     private final NightInbox inbox;
     private final NightBrokerQuarantine quarantine;
     private final NightMessageSchemas schemas;
+    private final NightPoisonDlq.Publisher poisonPublisher;
     private final Source source;
     private final String namespace;
 
@@ -55,11 +56,22 @@ public final class NightConsumerBridge {
     /** Schema validation requires durable quarantine to prevent unvalidated intake. */
     public NightConsumerBridge(NightInbox inbox, NightBrokerQuarantine quarantine,
                                Source source, String namespace, NightMessageSchemas schemas) {
+        this(inbox, quarantine, source, namespace, schemas, null);
+    }
+
+    /**
+     * Optional DLQ notification is only legal when original messages are
+     * persisted in quarantine. This is not a substitute for broker ACK safety.
+     */
+    public NightConsumerBridge(NightInbox inbox, NightBrokerQuarantine quarantine,
+                               Source source, String namespace, NightMessageSchemas schemas,
+                               NightPoisonDlq.Publisher poisonPublisher) {
         this.inbox = Objects.requireNonNull(inbox);
-        if (schemas != null && quarantine == null)
-            throw new IllegalArgumentException("Message schemas require durable quarantine");
+        if ((schemas != null || poisonPublisher != null) && quarantine == null)
+            throw new IllegalArgumentException("Schema and DLQ require durable quarantine");
         this.quarantine = quarantine;
         this.schemas = schemas;
+        this.poisonPublisher = poisonPublisher;
         this.source = Objects.requireNonNull(source);
         this.namespace = NightInbox.namespace(namespace);
     }
@@ -87,6 +99,9 @@ public final class NightConsumerBridge {
             // advance Kafka offsets or remove Rabbit messages.
             quarantine.capture(namespace, message.broker(), message.topic(),
                     message.sourceIdentity(), reason, message.eventId(), message.payload());
+            // A failed DLQ confirm deliberately leaves the source unacknowledged.
+            // Retried notifications have the same stable fingerprint/key.
+            if (poisonPublisher != null) poisonPublisher.publish(message, reason);
             message.acknowledger().acknowledge();
             return Result.QUARANTINED;
         }
