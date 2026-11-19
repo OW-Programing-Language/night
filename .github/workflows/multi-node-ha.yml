@@ -94,6 +94,46 @@ jobs:
           docker compose -p night-kafka-ha -f tests/ha/kafka-three-node.yml start "kafka-$node"
       - name: Verify ISR returns to three and new messages remain durable
         run: mvn -B -f platform/pom.xml -Dtest=NightKafkaQuorumFailoverTest -Dnight.ha.phase=return "-Dnight.ha.leaderFile=$RUNNER_TEMP/kafka-ha-leader" test
+      - name: Identify current Kafka partition leader before minority fault
+        run: mvn -B -f platform/pom.xml -Dtest=NightKafkaQuorumFailoverTest -Dnight.ha.phase=identify-minority-leader "-Dnight.ha.leaderFile=$RUNNER_TEMP/kafka-minority-leader" test
+      - name: Stop both Kafka followers, leaving actual current topic leader reachable
+        run: |
+          set -euo pipefail
+          leader="$(cat "$RUNNER_TEMP/kafka-minority-leader")"
+          case "$leader" in 1|2|3) ;; *) echo "Unexpected topic leader: $leader"; exit 1 ;; esac
+          for node in 1 2 3; do
+            if [ "$node" != "$leader" ]; then
+              docker compose -p night-kafka-ha -f tests/ha/kafka-three-node.yml kill -s SIGKILL "kafka-$node"
+            fi
+          done
+          echo "KAFKA_MINORITY_SURVIVOR=$leader" >> "$GITHUB_ENV"
+          echo "NIGHT_KAFKA_BOOTSTRAP_SERVERS=127.0.0.1:${leader}9092" >> "$GITHUB_ENV"
+          echo "Kafka partition leader $leader remains up, but has lost two voters and in-sync replicas"
+      - name: Verify Kafka refuses confirmation with one voter
+        run: |
+          timeout 110s mvn -B -f platform/pom.xml -Dtest=NightKafkaQuorumFailoverTest -Dnight.ha.phase=minority "-Dnight.ha.leaderFile=$RUNNER_TEMP/kafka-ha-leader" test
+      - name: Restore Kafka majority with original broker log storage
+        run: |
+          set -euo pipefail
+          for node in 1 2 3; do
+            if [ "$node" != "$KAFKA_MINORITY_SURVIVOR" ]; then
+              docker compose -p night-kafka-ha -f tests/ha/kafka-three-node.yml start "kafka-$node"
+            fi
+          done
+          for node in 1 2 3; do
+            if [ "$node" = "$KAFKA_MINORITY_SURVIVOR" ]; then continue; fi
+            ready=0
+            for attempt in $(seq 1 90); do
+              if docker compose -p night-kafka-ha -f tests/ha/kafka-three-node.yml exec -T "kafka-$node" /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1; then
+                ready=1
+                break
+              fi
+              sleep 2
+            done
+            test "$ready" -eq 1
+          done
+      - name: Verify Kafka recovers with stable event IDs and all three ISR replicas
+        run: timeout 110s mvn -B -f platform/pom.xml -Dtest=NightKafkaQuorumFailoverTest -Dnight.ha.phase=healed "-Dnight.ha.leaderFile=$RUNNER_TEMP/kafka-ha-leader" test
       - name: Kafka cluster logs on failure
         if: failure()
         run: |
@@ -219,6 +259,50 @@ jobs:
           exit 1
       - name: Verify successful post-recovery quorum publication
         run: mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=return test
+      - name: Stop both RabbitMQ quorum followers, leaving actual queue leader reachable
+        run: |
+          set -euo pipefail
+          queue="night_qq_$NIGHT_HA_RUN_ID"
+          definition="$(curl -fsS --retry 10 --retry-delay 2 -u night_test:night_ci_password "http://127.0.0.1:15672/api/queues/%2F/$queue")"
+          echo "$definition" | jq -e '.type == "quorum"'
+          leader="$(echo "$definition" | jq -r '.node // empty')"
+          case "$leader" in
+            rabbit@rmq-1) survivor=1; port=5672 ;;
+            rabbit@rmq-2) survivor=2; port=5673 ;;
+            rabbit@rmq-3) survivor=3; port=5674 ;;
+            *) echo "Unexpected quorum queue leader: $leader"; exit 1 ;;
+          esac
+          for node in 1 2 3; do
+            if [ "$node" != "$survivor" ]; then
+              docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml kill -s SIGKILL "rmq-$node"
+            fi
+          done
+          echo "RABBIT_MINORITY_SURVIVOR=$survivor" >> "$GITHUB_ENV"
+          echo "NIGHT_RABBITMQ_URL=amqp://night_test:night_ci_password@127.0.0.1:$port/%2F" >> "$GITHUB_ENV"
+          echo "Queue leader $leader remains reachable without a voting majority"
+      - name: Verify RabbitMQ refuses publisher confirm with quorum majority down
+        run: timeout 110s mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=minority test
+      - name: Restore RabbitMQ quorum members with original durable queue
+        run: |
+          set -euo pipefail
+          for node in 1 2 3; do
+            if [ "$node" != "$RABBIT_MINORITY_SURVIVOR" ]; then
+              docker compose -p night-rmq-ha -f tests/ha/rabbitmq-three-node.yml start "rmq-$node"
+            fi
+          done
+          for port in 15672 15673 15674; do
+            ready=0
+            for attempt in $(seq 1 90); do
+              if curl -fsS --max-time 3 -u night_test:night_ci_password "http://127.0.0.1:$port/api/overview" >/dev/null 2>&1; then
+                ready=1
+                break
+              fi
+              sleep 2
+            done
+            test "$ready" -eq 1
+          done
+      - name: Verify RabbitMQ restored majority, confirmed write and inbox integrity
+        run: timeout 110s mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=healed test
       - name: RabbitMQ cluster logs on failure
         if: failure()
         run: |

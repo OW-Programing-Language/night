@@ -158,4 +158,65 @@ class NightKafkaQuorumFailoverTest {
             assertEquals(List.of(event(1), event(2), event(3), event(4), event(5)), storedIds(jdbc));
         }
     }
+    @Test void identifyActualCurrentLeaderForMinorityFaultInjection() throws Exception {
+        Assumptions.assumeTrue(phase("identify-minority-leader"));
+        int leader = awaitReplicas(3);
+        String path = System.getProperty("night.ha.leaderFile");
+        if (path == null || !Path.of(path).isAbsolute())
+            throw new IllegalArgumentException("night.ha.leaderFile must be an absolute path");
+        try (NightJdbc jdbc = database()) {
+            assertEquals(List.of(event(1), event(2), event(3), event(4), event(5)), storedIds(jdbc));
+        }
+        Files.writeString(Path.of(path), Integer.toString(leader));
+    }
+
+    @Test void minorityCannotConfirmNewWritesOrMutateDurableInbox() throws Exception {
+        Assumptions.assumeTrue(phase("minority"));
+        // CI has terminated TWO of the three broker/controllers. A single
+        // remaining voter must not be able to confirm an acks=all write on
+        // a topic requiring two in-sync replicas.
+        try (NightJdbc jdbc = database(); NightKafka producer = new NightKafka()) {
+            assertEquals(List.of(event(1), event(2), event(3), event(4), event(5)),
+                    storedIds(jdbc));
+            producer.open();
+            assertThrows(IllegalStateException.class,
+                    () -> producer.publish(topic(), event(6), "{\"number\":6}"),
+                    "A minority must not confirm a new Kafka write");
+            assertEquals(List.of(event(1), event(2), event(3), event(4), event(5)),
+                    storedIds(jdbc), "Unconfirmed Kafka data must not enter the inbox");
+        }
+    }
+
+    @Test void restoredMajorityRecoversWithStableEventIds() throws Exception {
+        Assumptions.assumeTrue(phase("healed"));
+        awaitReplicas(3);
+        try (NightJdbc jdbc = database(); NightKafka producer = new NightKafka();
+             NightKafka consumer = new NightKafka()) {
+            // An earlier timed-out publish might still have reached a broker,
+            // so reusing the SAME event ID is deliberate. Inbox deduplication
+            // is the safety boundary for ambiguous producer confirmations.
+            producer.open();
+            producer.publish(topic(), event(6), "{\"number\":6}");
+            consumer.subscribe(topic(), group());
+            var bridge = new NightConsumerBridge(new NightInbox(jdbc),
+                    NightConsumerBridge.kafka(consumer, 500), namespace());
+            boolean received = false;
+            for (int i = 0; i < 20; i++) {
+                var result = await(bridge);
+                if (result == NightConsumerBridge.Result.STORED
+                        || result == NightConsumerBridge.Result.DUPLICATE) {
+                    received = true;
+                    break;
+                }
+            }
+            assertTrue(received, "Restored quorum must deliver the stable event ID");
+            assertEquals(List.of(event(1), event(2), event(3), event(4), event(5), event(6)),
+                    storedIds(jdbc));
+            var stored = jdbc.query("SELECT payload FROM night_inbox WHERE inbox_namespace=? AND event_id=?",
+                    List.of(namespace(), event(6)));
+            assertEquals(1, stored.size());
+            assertEquals("{\"number\":6}", stored.get(0).get("payload"));
+        }
+    }
+
 }
