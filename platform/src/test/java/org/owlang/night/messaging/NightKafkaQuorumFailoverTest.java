@@ -58,13 +58,23 @@ class NightKafkaQuorumFailoverTest {
         try (AdminClient admin = AdminClient.create(NightKafka.config(System.getenv()))) {
             int leader = -1;
             for (int i = 0; i < 90; i++) {
-                TopicDescription description = admin.describeTopics(List.of(topic()))
-                        .allTopicNames().get(15, TimeUnit.SECONDS).get(topic());
-                var partitions = description.partitions();
-                assertEquals(1, partitions.size());
-                var partition = partitions.get(0);
-                if (partition.leader() != null) leader = partition.leader().id();
-                if (partition.isr().size() == expected && leader > 0) return leader;
+                try {
+                    TopicDescription description = admin.describeTopics(List.of(topic()))
+                            .allTopicNames().get(15, TimeUnit.SECONDS).get(topic());
+                    var partitions = description.partitions();
+                    assertEquals(1, partitions.size());
+                    var partition = partitions.get(0);
+                    if (partition.leader() != null) leader = partition.leader().id();
+                    if (partition.isr().size() == expected && leader > 0) return leader;
+                } catch (java.util.concurrent.ExecutionException ex) {
+                    // KRaft metadata propagates asynchronously after topic
+                    // creation or leader election; only these transient
+                    // broker errors are retried, with a strict 90s cap.
+                    Throwable cause = ex.getCause();
+                    if (!(cause instanceof org.apache.kafka.common.errors.UnknownTopicOrPartitionException)
+                            && !(cause instanceof org.apache.kafka.common.errors.LeaderNotAvailableException))
+                        throw ex;
+                }
                 Thread.sleep(1000);
             }
             fail("Kafka topic did not reach " + expected + " in-sync replicas");
