@@ -23,7 +23,7 @@
 - [ ] PostgreSQL backup, point-in-time recovery, schema migrations and restore drill recorded
 - [ ] Transaction rollback/isolation pass concurrency and failure-injection tests
 - [ ] Redis keyspace isolation, expiration and failover tested with ACL/TLS configurations
-- [ ] Broker delivery, retry, duplicate handling, replay and dead-letter procedures verified
+- [ ] Broker delivery, retry, duplicate handling, replay and dead-letter procedures verified (single-node broker restart / Kafka consumer handoff CI evidence: [broker restart tests](broker-restart-tests.md); multi-node HA, TLS fault injection and independent acceptance still required)
 
 ## Operational readiness
 

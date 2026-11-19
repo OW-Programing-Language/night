@@ -28,6 +28,7 @@ jobs:
       NIGHT_JDBC_URL: 'jdbc:postgresql://localhost:5432/night'
       NIGHT_JDBC_USER: night_test
       NIGHT_JDBC_PASSWORD: night_test_ci_only
+      NIGHT_FAILOVER_RUN_ID: '${{ github.run_id }}'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/checkout@v7
@@ -75,7 +76,24 @@ jobs:
       - name: Install pinned OW compiler / runtime SPI
         run: mvn -B -q -f ow-lang/pom.xml install
       - name: Exercise real Kafka producer, group offsets and crash recovery
-        run: mvn -B -f platform/pom.xml -Dtest=NightKafkaTest,NightOutboxDispatcherTest,NightInboxTest,NightConsumerBridgeTest,NightBrokerQuarantineTest,NightPoisonDlqTest,NightMessageSchemasTest,NightMessageSchemaIntegrationTest test
+        run: mvn -B -f platform/pom.xml -Dtest=NightKafkaTest,NightKafkaGroupHandoffTest,NightOutboxDispatcherTest,NightInboxTest,NightConsumerBridgeTest,NightBrokerQuarantineTest,NightPoisonDlqTest,NightMessageSchemasTest,NightMessageSchemaIntegrationTest test
+      - name: Persist Kafka broker restart checkpoint and uncommitted offset
+        run: mvn -B -f platform/pom.xml -Dtest=NightBrokerRestartTest -Dnight.failover.transport=kafka -Dnight.failover.phase=before test
+      - name: Restart real Kafka KRaft broker container
+        run: |
+          set -euo pipefail
+          docker restart night-kafka
+          for attempt in $(seq 1 60); do
+            if docker exec night-kafka /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1; then
+              echo "Kafka recovered after restart"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs night-kafka
+          exit 1
+      - name: Verify Kafka offset fencing and redelivery after broker restart
+        run: mvn -B -f platform/pom.xml -Dtest=NightBrokerRestartTest -Dnight.failover.transport=kafka -Dnight.failover.phase=after test
       - name: Broker logs on failure
         if: failure()
         run: |

@@ -97,6 +97,7 @@ jobs:
       NIGHT_JDBC_URL: jdbc:postgresql://localhost:5432/night
       NIGHT_JDBC_USER: night_test
       NIGHT_JDBC_PASSWORD: night_test_ci_only
+      NIGHT_FAILOVER_RUN_ID: '${{ github.run_id }}'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/checkout@v7
@@ -118,3 +119,25 @@ jobs:
         run: mvn -B -f platform/pom.xml -Dtest=NightIsolationTest,NightRepositoryTest,NightOutboxTest,NightOutboxDispatcherTest,NightInboxTest,NightMultiWorkerRecoveryTest,NightConsumerBridgeTest,NightBrokerQuarantineTest,NightPoisonDlqTest,NightMessageSchemasTest,NightMessageSchemaIntegrationTest,NightRedisTest,NightRedisStreamsTest,NightCredentialStoreTest,NightSchedulerTest,NightRabbitMQTest test
       - name: Rehearse disposable PostgreSQL logical backup and restore
         run: bash tests/postgres_restore.sh
+      - name: Persist RabbitMQ broker restart checkpoint and unacknowledged delivery
+        run: mvn -B -f platform/pom.xml -Dtest=NightBrokerRestartTest -Dnight.failover.transport=rabbitmq -Dnight.failover.phase=before test
+      - name: Restart real RabbitMQ service container
+        run: |
+          set -euo pipefail
+          container="$(docker ps -q --filter ancestor=rabbitmq:4-management-alpine)"
+          if [ -z "$container" ]; then
+            echo "Cannot locate RabbitMQ CI service container"
+            exit 1
+          fi
+          docker restart "$container"
+          for attempt in $(seq 1 60); do
+            if docker exec "$container" rabbitmq-diagnostics -q ping >/dev/null 2>&1; then
+              echo "RabbitMQ recovered after restart"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs "$container"
+          exit 1
+      - name: Verify RabbitMQ durable requeue and PostgreSQL dedup after restart
+        run: mvn -B -f platform/pom.xml -Dtest=NightBrokerRestartTest -Dnight.failover.transport=rabbitmq -Dnight.failover.phase=after test
