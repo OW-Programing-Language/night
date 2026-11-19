@@ -68,3 +68,5 @@ For an independently supervised Kafka consumer that inserts into PostgreSQL **be
 The standalone consumer bridge can quarantine malformed Kafka envelope keys before committing their offsets; see [broker quarantine](broker-quarantine.md). Restart recovery is via the external supervisor, not uninterrupted multi-broker failover.
 
 **Three-node KRaft regression:** the dedicated [multi-node HA lab](three-node-ha.md) provisions RF=3/min-ISR=2 topics, kills the actual topic leader and checks new leader election, acked messages, consumer offsets, and recovery when the failed node rejoins. It runs only against disposable localhost test brokers, not a certified production security topology.
+
+**No-majority fail closed:** the three-node HA CI also kills two Kafka combined controller/broker voters while keeping the current partition leader reachable. Confirmed `acks=all` publication must fail when `min.insync.replicas=2` cannot be met. Recovering brokers and their disk state must permit another confirmed publish. [Runbook](three-node-ha.md).
