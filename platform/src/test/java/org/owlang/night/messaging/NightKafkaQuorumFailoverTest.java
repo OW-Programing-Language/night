@@ -158,6 +158,18 @@ class NightKafkaQuorumFailoverTest {
             assertEquals(List.of(event(1), event(2), event(3), event(4), event(5)), storedIds(jdbc));
         }
     }
+    @Test void identifyActualCurrentLeaderForMinorityFaultInjection() throws Exception {
+        Assumptions.assumeTrue(phase("identify-minority-leader"));
+        int leader = awaitReplicas(3);
+        String path = System.getProperty("night.ha.leaderFile");
+        if (path == null || !Path.of(path).isAbsolute())
+            throw new IllegalArgumentException("night.ha.leaderFile must be an absolute path");
+        try (NightJdbc jdbc = database()) {
+            assertEquals(List.of(event(1), event(2), event(3), event(4), event(5)), storedIds(jdbc));
+        }
+        Files.writeString(Path.of(path), Integer.toString(leader));
+    }
+
     @Test void minorityCannotConfirmNewWritesOrMutateDurableInbox() throws Exception {
         Assumptions.assumeTrue(phase("minority"));
         // CI has terminated TWO of the three broker/controllers. A single
