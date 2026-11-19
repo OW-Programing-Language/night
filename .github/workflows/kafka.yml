@@ -76,7 +76,7 @@ jobs:
       - name: Install pinned OW compiler / runtime SPI
         run: mvn -B -q -f ow-lang/pom.xml install
       - name: Exercise real Kafka producer, group offsets and crash recovery
-        run: mvn -B -f platform/pom.xml -Dtest=NightKafkaTest,NightOutboxDispatcherTest,NightInboxTest,NightConsumerBridgeTest,NightBrokerQuarantineTest,NightPoisonDlqTest,NightMessageSchemasTest,NightMessageSchemaIntegrationTest test
+        run: mvn -B -f platform/pom.xml -Dtest=NightKafkaTest,NightKafkaGroupHandoffTest,NightOutboxDispatcherTest,NightInboxTest,NightConsumerBridgeTest,NightBrokerQuarantineTest,NightPoisonDlqTest,NightMessageSchemasTest,NightMessageSchemaIntegrationTest test
       - name: Persist Kafka broker restart checkpoint and uncommitted offset
         run: mvn -B -f platform/pom.xml -Dtest=NightBrokerRestartTest -Dnight.failover.transport=kafka -Dnight.failover.phase=before test
       - name: Restart real Kafka KRaft broker container
