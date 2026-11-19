@@ -95,10 +95,53 @@ password/cookie**. Real clusters require TLS/mTLS or SASL, ACLs, credential
 rotation, secure discovery, replication monitoring and truly independent
 failure domains.
 
+## Majority loss (PR #20): deliberately remove TWO voting members
+
+After the normal leader-loss and rejoin sequence has verified all three
+replicas are healthy, CI runs a second, more severe experiment without
+recreating the topic, queue, database, or PostgreSQL inbox.
+
+**Kafka:** identify the current partition leader with a dedicated JVM
+metadata phase, then SIGKILL both other combined broker/controller voters.
+The single surviving broker is reachable from the test JVM, but the
+`min.insync.replicas=2` topic and KRaft controllers have no voting
+majority. Night's `acks=all` publish must throw instead of claiming
+success. The test checks the PostgreSQL inbox has not been modified by this
+unconfirmed broker attempt. Restore both replicas, require ISR to return
+to three, confirm a new event and consume it without losing previously
+committed event IDs.
+
+**RabbitMQ:** identify the current three-replica quorum queue leader
+through the management API and SIGKILL both *followers*. Keeping the
+leader's AMQP endpoint reachable isolates lack of a **queue voting
+majority** from total broker unreachability. Night must not report a
+confirmed publish; either queue-declare failure or publisher-confirm
+timeout fails the operation. Bounded AMQP socket I/O prevents indefinite
+blocking. Restore both members, confirm a new message and check the
+PostgreSQL inbox retains all original events and deduplicates a repeated
+event ID.
+
+Both tests run in **separate JVM phases**, preserving broker disks and
+database state. All fault injection runs only inside the isolated,
+same-runner CI cluster. Existing classic queues are unaffected; RabbitMQ
+quorum declarations remain opt-in.
+
+**Unconfirmed does not prove undelivered.** A producer may have submitted
+a message just before losing its acknowledgement, so the attempted event
+with an uncertain result must not be silently discarded or automatically
+republished without a stable ID/deduplication strategy. The recovery tests
+permit that event to be present or absent and independently verify a fresh
+*confirmed* event after healing.
+
+This is controlled **two-node process loss**, not a true network partition.
+Physical multi-host isolation, one-way packet loss, fencing/stale-leader
+testing on network partition, TLS/SASL certificate rotation, and
+representative sustained production load remain release blockers.
+
 ## Still outside the release certification gate
 
-- Real network partitions or majority loss, and detecting that a minority
-  must reject writes
+- Real asymmetric network partitions, WAN/host failures and stale-leader
+  fencing under traffic partitions (two-node process majority-loss CI is covered)
 - Recovery from physical disk failure or loss of broker log volumes
 - Kubernetes rolling upgrades, rebalance and rescheduling between hosts
 - Production TLS/SASL broker failover and certificate rotation
