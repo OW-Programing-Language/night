@@ -73,6 +73,9 @@ public final class NightRabbitMQ implements AutoCloseable {
             factory.setAutomaticRecoveryEnabled(true);
             factory.setNetworkRecoveryInterval(5_000);
             factory.setConnectionTimeout(5_000);
+            // Never allow queueDeclare or other AMQP RPCs to hang forever
+            // when a quorum queue temporarily lacks its voting majority.
+            factory.setSocketTimeout(10_000);
             factory.setRequestedHeartbeat(30);
             if (uri.startsWith("amqps://")) factory.enableHostnameVerification();
             connection = factory.newConnection("night-platform");
