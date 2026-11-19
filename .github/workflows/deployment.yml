@@ -34,7 +34,7 @@ jobs:
       NIGHT_DB_PASSWORD: example-only-not-for-production
       NIGHT_BEARER_KEYS: 'ADMIN:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Validate Compose configuration
         run: docker compose -f compose.yaml config --quiet
       - name: Validate Caddy HTTPS proxy configuration
@@ -63,6 +63,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build non-root Night example image
         run: docker build --pull --tag night:ci .
