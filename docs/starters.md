@@ -68,3 +68,5 @@ must supply them through a secret manager/environment.
 See [Production guide](production.md).
 
 **Consumer poison envelopes:** Invalid Kafka/RabbitMQ transport envelopes can be persisted to the [broker quarantine](broker-quarantine.md) before broker acknowledgement. This is not schema-aware application validation or high-availability certification.
+
+**Opt-in `night-message-schemas` (experimental):** trusted local JSON rules per broker topic, strict bounded parsing, nested field validation and PostgreSQL quarantine before broker ACK. Requires Flyway V8. Not JSON Schema specification, schema registry or automatic OW callback execution. [Usage](message-schemas.md).

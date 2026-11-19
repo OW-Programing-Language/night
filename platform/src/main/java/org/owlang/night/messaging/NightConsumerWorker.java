@@ -40,6 +40,9 @@ public final class NightConsumerWorker {
         String broker = broker(env);
         String namespace = NightInbox.namespace(required(env, "NIGHT_CONSUMER_NAMESPACE"));
         int idleMs = idleMillis(env);
+        // Eagerly parse and validate all configured rules before connecting
+        // to any broker, so configuration errors never ACK messages.
+        NightMessageSchemas schemas = NightMessageSchemas.fromEnvironment(env);
         String kafkaTopic = null, kafkaGroup = null, rabbitQueue = null;
         if ("kafka".equals(broker)) {
             kafkaTopic = NightKafka.identifier(required(env, "NIGHT_CONSUMER_TOPIC"));
@@ -72,7 +75,7 @@ public final class NightConsumerWorker {
             }
             NightConsumerBridge bridge = new NightConsumerBridge(
                     new NightInbox(jdbc), new NightBrokerQuarantine(jdbc),
-                    source, namespace);
+                    source, namespace, schemas);
             System.out.println("Night consumer worker started (transport=" + broker
                     + ", namespace=" + namespace + ")");
             while (running.get() && !Thread.currentThread().isInterrupted()) {
