@@ -92,7 +92,7 @@ call: night.emit("order.placed", 1)
 Subscribers receive `on_event(type string, payload int)` while active.
 Events are synchronous and local, so avoid slow subscriber methods. This is
 closer to Spring Modulith's application events than to a durable broker.
-Transactional outbox support remains future work.
+A PostgreSQL transactional outbox and separately supervised Kafka/RabbitMQ workers are now available through the optional Night platform; see [outbox dispatcher](outbox-dispatcher.md) and [consumer inbox](inbox.md). Synchronous `night.emit()` remains a local-only event mechanism.
 
 ## 6. Live module operations
 
