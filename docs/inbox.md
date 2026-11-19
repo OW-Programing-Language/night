@@ -39,7 +39,7 @@ For RabbitMQ, configure `NIGHT_CONSUMER_BROKER=rabbitmq`, `NIGHT_RABBITMQ_URL=am
 
 Run the consumer independently of the web process under a supervisor such as the reference [systemd unit](../deploy/night-consumer.service) or Kubernetes. Unexpected DB/broker exceptions cause a **fail-fast exit**; the supervisor restarts the worker after backoff. A graceful signal attempts to finish the current intake before exit.
 
-**Security and operations:** Use an ACL-limited broker identity, TLS certificate verification, a dedicated least-privilege PostgreSQL account, bounded worker replication, and alerts on restart loops. Kafka consumer-group offsets are committed manually after insert; RabbitMQ uses manual ACK. Both transports support PostgreSQL-backed quarantine of invalid envelopes, but no broker-side poison-message exchange or automatic application-schema validation. The worker does **not** choose or execute dynamic callbacks.
+**Security and operations:** Use an ACL-limited broker identity, TLS certificate verification, a dedicated least-privilege PostgreSQL account, bounded worker replication, and alerts on restart loops. Kafka consumer-group offsets are committed manually after insert; RabbitMQ uses manual ACK. Both transports support PostgreSQL-backed quarantine of invalid envelopes, optional local per-topic message rules, and broker-confirmed DLQ reference notifications. These are not a native RabbitMQ dead-letter exchange or arbitrary OW callback execution. The worker does **not** choose or execute dynamic callbacks.
 
 ## 3. Process inbox events from OW
 
@@ -92,3 +92,7 @@ To validate message JSON before adding an event to the inbox, set `NIGHT_CONSUME
 ## Optional broker-side dead-letter reference
 
 Set `NIGHT_CONSUMER_DLQ_TOPIC` for Kafka or `NIGHT_CONSUMER_DLQ_QUEUE` for RabbitMQ to publish a **confirmed reference notification** after the original invalid envelope has been committed to PostgreSQL quarantine and before broker ACK. Full payload remains in restricted PostgreSQL. Details: [dead-letter routing](dead-letter-routing.md). No native RabbitMQ DLX is configured automatically.
+
+## Broker restart regression coverage
+
+The CI workflows now restart Kafka and RabbitMQ containers between two separate test JVMs with a durable PostgreSQL inbox. They verify that committed events stay committed, unacknowledged events are redelivered, and consumer-group handoff preserves deduplication. See [broker restart tests](broker-restart-tests.md). This is not a multi-node broker failover certification.
