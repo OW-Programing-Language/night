@@ -95,7 +95,7 @@ security and JDBC rather than unsecured application-level helper stubs.
 [Bookstore example](examples/bookstore/README.md) ·
 [Deployment templates](docs/deployment.md) · [Redis cache](docs/redis.md) ·
 [Credential store](docs/credentials.md) · [OpenAPI](docs/openapi.md) · [SMTP Mail](docs/mail.md) ·
-[Scheduler](docs/scheduler.md) · [RabbitMQ](docs/rabbitmq.md) · [Redis Streams](docs/redis-streams.md) · [Kafka](docs/kafka.md) · [Inbox](docs/inbox.md) · [Broker Quarantine](docs/broker-quarantine.md) · [Dead-letter Routing](docs/dead-letter-routing.md) · [Broker Restart Tests](docs/broker-restart-tests.md) · [Message Schemas](docs/message-schemas.md) · [Outbox Worker](docs/outbox-dispatcher.md) · [Validation](docs/validation.md) ·
+[Scheduler](docs/scheduler.md) · [RabbitMQ](docs/rabbitmq.md) · [Redis Streams](docs/redis-streams.md) · [Kafka](docs/kafka.md) · [Inbox](docs/inbox.md) · [Broker Quarantine](docs/broker-quarantine.md) · [Dead-letter Routing](docs/dead-letter-routing.md) · [Broker Restart Tests](docs/broker-restart-tests.md) · [Three-Node HA](docs/three-node-ha.md) · [Message Schemas](docs/message-schemas.md) · [Outbox Worker](docs/outbox-dispatcher.md) · [Validation](docs/validation.md) ·
 [Security/Data increments](docs/incremental-production.md) ·
 [Upgrade/rollback policy](docs/upgrade-policy.md) ·
 [OW starter guide](docs/guide.md)
@@ -116,3 +116,5 @@ readiness. End-to-end deployment tests and an independent audit remain outstandi
 **Optional broker DLQ notifications:** The supervised Kafka/RabbitMQ inbox worker can publish a broker-confirmed fingerprint reference after PostgreSQL quarantine and before ACK; see [dead-letter routing](docs/dead-letter-routing.md). These notifications contain no rejected payload and remain at-least-once.
 
 **Broker recovery CI:** Kafka and RabbitMQ integration jobs deliberately restart their broker containers between separate Java test processes, verifying committed offsets/manual ACKs and delivery recovery. Kafka also tests consumer-group handoff and PostgreSQL deduplication. [Test design and limits](docs/broker-restart-tests.md): this is not multi-node HA certification.
+
+**Three-node broker failover testing:** a dedicated CI job provisions 3 Kafka KRaft voters or 3 RabbitMQ quorum queue members, kills the *actual* leader, then verifies durable recovery through a surviving majority and rejoins the failed member. This is same-host, loopback-only fault injection, not production multi-host certification. See [evidence boundaries](docs/three-node-ha.md).

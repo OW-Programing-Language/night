@@ -10,6 +10,7 @@ import dev.oreo.Interpreter;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -50,6 +51,14 @@ public final class NightRabbitMQ implements AutoCloseable {
             throw new IllegalArgumentException("RabbitMQ requires amqps:// TLS outside loopback CI");
     }
 
+    /** Explicitly choose durable classic or replicated quorum queues. */
+    public static String queueType(Map<String, String> env) {
+        String value = env.getOrDefault("NIGHT_RABBITMQ_QUEUE_TYPE", "classic");
+        if (!"classic".equals(value) && !"quorum".equals(value))
+            throw new IllegalArgumentException("RabbitMQ queue type must be classic or quorum");
+        return value;
+    }
+
     public synchronized int open() {
         if (channel != null && channel.isOpen()) return 1;
         String uri = System.getenv("NIGHT_RABBITMQ_URL");
@@ -68,7 +77,13 @@ public final class NightRabbitMQ implements AutoCloseable {
             if (uri.startsWith("amqps://")) factory.enableHostnameVerification();
             connection = factory.newConnection("night-platform");
             channel = connection.createChannel();
-            channel.queueDeclare(configured, true, false, false, null);
+            // Quorum replication is opt-in; existing classic queue deployments
+            // retain their unchanged declaration and topology.
+            String type = queueType(System.getenv());
+            Map<String, Object> args = "quorum".equals(type)
+                    ? Map.of("x-queue-type", "quorum", "x-quorum-initial-group-size", 3)
+                    : null;
+            channel.queueDeclare(configured, true, false, false, args);
             channel.basicQos(10);
             channel.confirmSelect();
             queue = configured;

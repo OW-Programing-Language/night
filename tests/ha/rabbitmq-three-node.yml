@@ -1,0 +1,33 @@
+# Disposable three-node RabbitMQ quorum test cluster.
+# The CI workflow explicitly joins rmq-2 and rmq-3 to rmq-1 before publishing.
+# This is not a production topology or a cross-host HA configuration.
+services:
+  rmq-1:
+    image: rabbitmq:4.1-management-alpine
+    hostname: rmq-1
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment: &rabbit-base
+      RABBITMQ_NODENAME: "rabbit@rmq-1"
+      RABBITMQ_ERLANG_COOKIE: "night_ci_quorum_cookie_not_for_production"
+      RABBITMQ_DEFAULT_USER: "night_test"
+      RABBITMQ_DEFAULT_PASS: "night_ci_password"
+  rmq-2:
+    image: rabbitmq:4.1-management-alpine
+    hostname: rmq-2
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    environment:
+      <<: *rabbit-base
+      RABBITMQ_NODENAME: "rabbit@rmq-2"
+  rmq-3:
+    image: rabbitmq:4.1-management-alpine
+    hostname: rmq-3
+    ports:
+      - "5674:5672"
+      - "15674:15672"
+    environment:
+      <<: *rabbit-base
+      RABBITMQ_NODENAME: "rabbit@rmq-3"
