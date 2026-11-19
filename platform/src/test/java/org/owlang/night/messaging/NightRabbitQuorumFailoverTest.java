@@ -125,4 +125,47 @@ class NightRabbitQuorumFailoverTest {
             assertEquals(List.of(event(1), event(2), event(3), event(4), event(5)), storedIds(jdbc));
         }
     }
+    @Test void minorityCannotConfirmNewQuorumMessage() throws Exception {
+        Assumptions.assumeTrue(phase("minority"));
+        // Both rmq-2 and rmq-3 are stopped, leaving only node 1. Depending
+        // on which member last led the queue, declaration may itself fail or
+        // publication may time out. In either case there must be no confirm.
+        try (NightJdbc jdbc = database()) {
+            assertEquals(List.of(event(1), event(2), event(3), event(4), event(5)),
+                    storedIds(jdbc));
+            boolean published = false;
+            try (NightRabbitMQ rabbit = new NightRabbitMQ(queue())) {
+                rabbit.open();
+                rabbit.publish(event(6), "{\"number\":6}");
+                published = true;
+            } catch (IllegalStateException expected) {
+                // Quorum unavailable: fail closed without accepting work.
+            }
+            assertFalse(published, "A single quorum replica must never confirm a write");
+            assertEquals(List.of(event(1), event(2), event(3), event(4), event(5)),
+                    storedIds(jdbc));
+        }
+    }
+
+    @Test void restoredQuorumContinuesWithStableMessageIdAndNoDuplicateInboxRow()
+            throws Exception {
+        Assumptions.assumeTrue(phase("healed"));
+        try (NightJdbc jdbc = database(); NightRabbitMQ rabbit = connect()) {
+            // RabbitMQ publisher timeout is ambiguous: retry with the SAME
+            // application ID, then assert PostgreSQL idempotent acceptance.
+            assertEquals(1, rabbit.publish(event(6), "{\"number\":6}"));
+            var bridge = new NightConsumerBridge(new NightInbox(jdbc),
+                    NightConsumerBridge.rabbitMq(rabbit, queue()), namespace());
+            var result = await(bridge);
+            assertTrue(result == NightConsumerBridge.Result.STORED
+                    || result == NightConsumerBridge.Result.DUPLICATE);
+            assertEquals(List.of(event(1), event(2), event(3), event(4), event(5), event(6)),
+                    storedIds(jdbc));
+            var rows = jdbc.query("SELECT payload FROM night_inbox WHERE inbox_namespace=? AND event_id=?",
+                    List.of(namespace(), event(6)));
+            assertEquals(1, rows.size());
+            assertEquals("{\"number\":6}", rows.get(0).get("payload"));
+        }
+    }
+
 }
