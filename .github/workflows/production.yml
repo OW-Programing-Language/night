@@ -18,7 +18,7 @@ jobs:
         with:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
-          ref: 659371da25e5fe7dfe35b57bc9e5f38c26b1a018
+          ref: b5f037a4ab010071288a4dabeb2d8e7e1354c8f8
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -55,6 +55,8 @@ jobs:
         run: python3 tests/production_smoke.py
       - name: Verify annotated OW routes and transactional database atomicity
         run: python3 tests/mapped_transactions_smoke.py
+      - name: Verify OW repository CRUD injection and JDBC transaction atomicity
+        run: python3 tests/repositories_http_smoke.py
 
   postgres-integration:
     runs-on: ubuntu-latest
@@ -111,7 +113,7 @@ jobs:
         with:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
-          ref: 659371da25e5fe7dfe35b57bc9e5f38c26b1a018
+          ref: b5f037a4ab010071288a4dabeb2d8e7e1354c8f8
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -123,7 +125,7 @@ jobs:
       - name: Install OW extension SPI
         run: mvn -B -q -f ow-lang/pom.xml install
       - name: Verify JDBC transaction and rollback behavior on PostgreSQL
-        run: mvn -B -f platform/pom.xml -Dtest=NightIsolationTest,NightRepositoryTest,NightOutboxTest,NightOutboxDispatcherTest,NightInboxTest,NightMultiWorkerRecoveryTest,NightConsumerBridgeTest,NightBrokerQuarantineTest,NightPoisonDlqTest,NightMessageSchemasTest,NightMessageSchemaIntegrationTest,NightRedisTest,NightRedisStreamsTest,NightCredentialStoreTest,NightSchedulerTest,NightRabbitMQTest test
+        run: mvn -B -f platform/pom.xml -Dtest=NightIsolationTest,NightRepositoryTest,NightCrudRepositoryTest,NightOutboxTest,NightOutboxDispatcherTest,NightInboxTest,NightMultiWorkerRecoveryTest,NightConsumerBridgeTest,NightBrokerQuarantineTest,NightPoisonDlqTest,NightMessageSchemasTest,NightMessageSchemaIntegrationTest,NightRedisTest,NightRedisStreamsTest,NightCredentialStoreTest,NightSchedulerTest,NightRabbitMQTest test
       - name: Rehearse disposable PostgreSQL logical backup and restore
         run: bash tests/postgres_restore.sh
       - name: Persist RabbitMQ broker restart checkpoint and unacknowledged delivery
