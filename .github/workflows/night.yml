@@ -15,7 +15,7 @@ jobs:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
           # Known OW runtime with native module/functor signatures and HTTP.
-          ref: 1298fd05a78106bc8a81b035693b9ec6456e41a9
+          ref: 8c09323d270fd18e1e2d34306155b81c9ceb08c8
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -31,6 +31,8 @@ jobs:
         run: |
           java -jar ow-lang/target/OwIDE.jar check examples/bookstore/main.ow
           java -jar ow-lang/target/OwIDE.jar check examples/bookstore/auto_main.ow
+          java -jar ow-lang/target/OwIDE.jar check examples/controllers/main.ow
+          java -jar ow-lang/target/OwIDE.jar check tests/controller_mount.ow
           for file in tests/lifecycle.ow tests/rollback.ow tests/cycle.ow tests/missing_dependency.ow tests/restart.ow tests/discovery.ow; do
             java -jar ow-lang/target/OwIDE.jar check "$file"
           done
@@ -38,6 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           java -jar ow-lang/target/OwIDE.jar run tests/discovery.ow
+          java -jar ow-lang/target/OwIDE.jar run tests/controller_mount.ow
           java -jar ow-lang/target/OwIDE.jar run tests/lifecycle.ow | tee /tmp/night-lifecycle.log
           java -jar ow-lang/target/OwIDE.jar run tests/rollback.ow | tee /tmp/night-rollback.log
           java -jar ow-lang/target/OwIDE.jar run tests/cycle.ow
@@ -56,3 +59,4 @@ jobs:
         run: |
           python3 tests/http_smoke.py
           python3 tests/http_smoke.py examples/bookstore/auto_main.ow
+          python3 tests/controller_http_smoke.py
