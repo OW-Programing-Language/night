@@ -77,11 +77,21 @@ class NightApp:
   fn discover_native():
     call: assert(this.attempted == 0, "Night: cannot discover modules after boot")
     set candidates: module_scan("NIGHT_COMPONENT")
+    set seen: array(len(candidates), "")
+    set seen_count int: 0
     set added int: 0
     set i int: 0
     while: i < len(candidates)
       set source NIGHT_COMPONENT: candidates[i]
       set key string: source.name()
+      # Duplicate declared names must never silently shadow one another,
+      # even if a manually registered implementation takes precedence.
+      set j int: 0
+      while: j < seen_count
+        call: assert(seen[j] != key, "Night: duplicate discovered module name " + key)
+        set j: j + 1
+      set seen[seen_count]: key
+      set seen_count: seen_count + 1
       if: this.index_of(key) == 99
         call: this.use_native_as(source, "NIGHT_COMPONENT")
         set added: added + 1
