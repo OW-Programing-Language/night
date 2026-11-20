@@ -45,3 +45,5 @@
 | Deployment end-to-end | Pending | Pending | Pending | OPEN |
 
 The GitHub roadmap in issue #3 is the authoritative feature/task checklist; this file defines the separate **release certification evidence**.
+
+**Additional broker fault evidence:** [Live 2:1 / 1:2 Kafka and RabbitMQ network partition CI](live-network-partitions.md) verifies publisher-confirmation safety while brokers stay running, followed by healing and inbox deduplication. Same-host fault injection is not cross-host/TLS or SLO certification.

@@ -154,7 +154,21 @@ class NightKafkaQuorumFailoverTest {
             consumer.subscribe(topic(), group());
             var bridge = new NightConsumerBridge(new NightInbox(jdbc),
                     NightConsumerBridge.kafka(consumer, 500), namespace());
-            assertEquals(NightConsumerBridge.Result.STORED, await(bridge));
+            // A network partition may cause Kafka to replay an already
+            // committed offset after reconnecting. That is valid at-least-once
+            // delivery: the PostgreSQL inbox must return DUPLICATE and retain
+            // its payload, then still ingest the newly published event 5.
+            boolean eventFiveStored = false;
+            for (int i = 0; i < 12; i++) {
+                var outcome = await(bridge);
+                if (outcome == NightConsumerBridge.Result.STORED) {
+                    eventFiveStored = true;
+                    break;
+                }
+                assertEquals(NightConsumerBridge.Result.DUPLICATE, outcome,
+                        "Unexpected result while recovering a committed offset");
+            }
+            assertTrue(eventFiveStored, "Event 5 was not durably stored after partition healing");
             assertEquals(List.of(event(1), event(2), event(3), event(4), event(5)), storedIds(jdbc));
         }
     }
@@ -200,16 +214,25 @@ class NightKafkaQuorumFailoverTest {
             consumer.subscribe(topic(), group());
             var bridge = new NightConsumerBridge(new NightInbox(jdbc),
                     NightConsumerBridge.kafka(consumer, 500), namespace());
-            boolean received = false;
+            boolean receivedNewEvent = false;
             for (int i = 0; i < 20; i++) {
                 var result = await(bridge);
-                if (result == NightConsumerBridge.Result.STORED
-                        || result == NightConsumerBridge.Result.DUPLICATE) {
-                    received = true;
+                if (result == NightConsumerBridge.Result.STORED) {
+                    receivedNewEvent = true;
+                    break;
+                }
+                assertEquals(NightConsumerBridge.Result.DUPLICATE, result,
+                        "Only already-persisted events may be replayed");
+                // The retried event 6 itself might have reached a broker
+                // before its failed confirmation; it is safe to treat it as
+                // recovered only when the exact durable row is present.
+                var persisted = storedIds(jdbc);
+                if (persisted.contains(event(6))) {
+                    receivedNewEvent = true;
                     break;
                 }
             }
-            assertTrue(received, "Restored quorum must deliver the stable event ID");
+            assertTrue(receivedNewEvent, "Restored quorum must deliver the stable event ID");
             assertEquals(List.of(event(1), event(2), event(3), event(4), event(5), event(6)),
                     storedIds(jdbc));
             var stored = jdbc.query("SELECT payload FROM night_inbox WHERE inbox_namespace=? AND event_id=?",

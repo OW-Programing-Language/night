@@ -97,8 +97,10 @@ failure domains.
 
 ## Still outside the release certification gate
 
-- Real network partitions where isolated processes stay alive; two-node
-  **process-termination** majority loss is exercised by [the next CI phase](quorum-majority-loss.md)
+- Live Docker bridge partitions with all broker processes running are covered by
+  [the network-partition workflow](live-network-partitions.md), while two-node
+  process-termination majority loss is in [quorum majority-loss CI](quorum-majority-loss.md).
+  Cross-host asymmetric partitions remain a release gate.
 - Recovery from physical disk failure or loss of broker log volumes
 - Kubernetes rolling upgrades, rebalance and rescheduling between hosts
 - Production TLS/SASL broker failover and certificate rotation
@@ -109,3 +111,5 @@ See [Night 1.0 release gates](release-gates.md) and
 [the tracked roadmap](https://github.com/OW-Programing-Language/night/issues/3).
 
 The CI workflow also checks **loss of two out of three voters** with fail-closed broker confirmations and recovery using stable event IDs: see [quorum majority-loss testing](quorum-majority-loss.md). This is process termination, not a network partition.
+
+The dedicated [live network partition and healing test](live-network-partitions.md) separates the actual leader from its followers, then separately isolates two followers from the still-running leader, verifying safe minority rejection and stable-ID recovery.
