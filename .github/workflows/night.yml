@@ -46,7 +46,7 @@ jobs:
           python3 tests/verify_output.py /tmp/night-lifecycle.log /tmp/night-rollback.log /tmp/night-restart.log
       - name: Reject duplicate module names and malformed native components
         run: |
-          for file in tests/duplicate_module.ow tests/invalid_native_contract.ow; do
+          for file in tests/duplicate_module.ow tests/discovery_duplicate.ow tests/invalid_native_contract.ow; do
             if java -jar ow-lang/target/OwIDE.jar run "$file"; then
               echo "ERROR: Night accepted an invalid application: $file"
               exit 1
