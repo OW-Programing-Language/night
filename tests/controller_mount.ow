@@ -1,0 +1,16 @@
+import "../src/NightApp.ow"
+import "../examples/controllers/GreetingService.ow"
+import "../examples/controllers/GreetingController.ow"
+
+main:
+  set night: new NightApp()
+  call: assert(night.boot() == 1, "boot before controllers")
+  call: assert(night.mount_controllers() == 1, "auto-mount controller")
+  call: assert(night.mount_controllers() == 0, "mount idempotent")
+  set handlers: component_scan("Controller")
+  call: assert(len(handlers) == 1, "exactly one controller")
+  call: assert(handlers[0].message() == "Hello from Night and OW")
+  set same: component_get("GreetingController")
+  call: assert(same == handlers[0], "controller singleton reused")
+  call: assert(night.stop() == 1, "clean Night lifecycle")
+  print: "PASS Night annotated controller and injection"
