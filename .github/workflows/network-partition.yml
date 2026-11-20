@@ -218,6 +218,8 @@ jobs:
           echo "RABBIT_PARTITION_LEADER=$isolate" >> "$GITHUB_ENV"
           echo "RABBIT_ISOLATED_NODENAME=$leader" >> "$GITHUB_ENV"
           echo "RABBIT_SURVIVOR_MANAGEMENT_PORT=$survivor_management_port" >> "$GITHUB_ENV"
+          # Record a strict timestamp so the barrier cannot match old boot logs.
+          echo "RABBIT_ISOLATION_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
           bash tests/ha/network-partition.sh isolate night-rmq-partition tests/ha/rabbitmq-three-node.yml "rmq-$isolate"
           echo "NIGHT_RABBITMQ_URL=amqp://night_test:night_ci_password@127.0.0.1:$survivor_port/%2F" >> "$GITHUB_ENV"
       - name: Wait for real RabbitMQ network peer timeout and new quorum leader
@@ -242,6 +244,36 @@ jobs:
           test "$ready" -eq 1 || { echo "RabbitMQ did not stabilize a surviving majority"; exit 1; }
       - name: Verify surviving RabbitMQ majority publishes and preserves inbox integrity
         run: timeout 150s mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=after test
+      - name: Verify isolated RabbitMQ leader detected BOTH lost peers before healing
+        run: |
+          set -euo pipefail
+          isolated="$RABBIT_PARTITION_LEADER"
+          case "$isolated" in 1|2|3) ;; *) echo "Invalid isolated node"; exit 1 ;; esac
+          cid="$(docker compose -p night-rmq-partition -f tests/ha/rabbitmq-three-node.yml ps -q "rmq-$isolated")"
+          test -n "$cid"
+          # Surviving-majority readiness does NOT prove the disconnected
+          # original leader has received net_tick_timeout on both peers.
+          # Reconnecting before its detector fires caused a real Mnesia
+          # inconsistent_database / running_partitioned_network race.
+          # Read ONLY log entries emitted after the current fault.
+          for peer in 1 2 3; do
+            if [ "$peer" = "$isolated" ]; then continue; fi
+            observed=0
+            for attempt in $(seq 1 90); do
+              if docker logs --since "$RABBIT_ISOLATION_TIMESTAMP" "$cid" 2>&1 |
+                grep -F "node 'rabbit@rmq-$peer' down: net_tick_timeout" >/dev/null; then
+                observed=1
+                echo "Original RabbitMQ leader detected disconnected peer rabbit@rmq-$peer"
+                break
+              fi
+              sleep 2
+            done
+            test "$observed" -eq 1 || { echo "Isolated leader did not recognize peer rmq-$peer as down"; exit 1; }
+          done
+          # Give the configured pause_minority monitor time to act after
+          # Erlang distribution has declared both peers unreachable.
+          sleep 8
+          test "$(docker inspect -f '{{.State.Running}}' "$cid")" = true
       - name: Heal isolated RabbitMQ leader without restarting its process
         run: bash tests/ha/network-partition.sh heal night-rmq-partition tests/ha/rabbitmq-three-node.yml "rmq-$RABBIT_PARTITION_LEADER"
       - name: Wait for all three live RabbitMQ cluster members to reconnect
