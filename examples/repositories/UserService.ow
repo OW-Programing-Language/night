@@ -1,0 +1,37 @@
+@Service
+class UserService:
+  @Inject
+  field private users UserRepository
+
+  @Transactional
+  fn create(id int, username string) -> int:
+    return: this.users.save({id: id, username: username, score: id * 10})
+
+  @Transactional
+  fn create_then_fail(id int, username string) -> int:
+    call: this.users.save({id: id, username: username, score: 0})
+    throw: "intentional repository rollback"
+
+  @Transactional
+  fn catch_failure(id int, username string) -> int:
+    try:
+      call: this.create_then_fail(id, username)
+    catch error:
+      print: "nested repository failure caught"
+    return: 1
+
+  fn find(id int):
+    return: this.users.findById(id)
+
+  fn exists(id int) -> int:
+    return: this.users.existsById(id)
+
+  fn list():
+    return: this.users.findAll()
+
+  fn page(limit int, offset int):
+    return: this.users.page("-score", limit, offset)
+
+  @Transactional
+  fn delete(id int) -> int:
+    return: this.users.deleteById(id)
