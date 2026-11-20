@@ -74,7 +74,7 @@ public final class NightAutoConfiguration {
             throw new IllegalArgumentException("Invalid Night dependencies.yml: " + ex.getMessage(), ex);
         }
         Map<?, ?> root = mapping(document, "dependencies.yml");
-        if (!"1".equals(String.valueOf(root.getOrDefault("format", 1))))
+        if (!"1".equals(String.valueOf(root.containsKey("format") ? root.get("format") : 1)))
             throw new IllegalArgumentException("Unsupported OW dependencies.yml format");
         LinkedHashSet<String> detected = new LinkedHashSet<>();
         for (Object item : sequence(root.get("dependencies"), "dependencies")) {
