@@ -1,0 +1,30 @@
+# No manual mount(): OW registers all routes from mapping annotations.
+@Controller
+class EntryController:
+  @Inject
+  field private entries EntryService
+
+  @GetMapping("/api/entries/:id")
+  fn count():
+    set id int: int(param("id"))
+    return: {count: this.entries.row_count(id)}
+
+  # Controller and service use the same REQUIRED transaction.
+  @PostMapping("/api/entries/:id")
+  @Transactional
+  fn create():
+    set id int: int(param("id"))
+    call: this.entries.insert_record(id, body())
+    return: response(201, {id: id, created: 1})
+
+  @PostMapping("/api/entries/:id/fail")
+  fn fail():
+    set id int: int(param("id"))
+    call: this.entries.insert_then_fail(id, body())
+    return: {created: 1}
+
+  @PostMapping("/api/entries/:id/caught")
+  fn catch_nested():
+    set id int: int(param("id"))
+    call: this.entries.catch_inner_failure(id, body())
+    return: {created: 1}
