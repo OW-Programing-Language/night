@@ -27,6 +27,16 @@ call: assert(catalog.available(1) == 1)
 class object. The OW type system verifies the requested `CATALOG` signature;
 string labels supplied to `use_native_as` are metadata only.
 
+## Optional runtime component discovery
+
+Call `night.discover_native()` before `boot()` to enumerate imported,
+publicly reachable OW modules implementing `NIGHT_COMPONENT` using the
+`module_scan` interpreter primitive (ow-lang PR #62). Instances produced by
+functors can be discovered **after the composition root instantiates them**.
+The scan deduplicates aliases; Night leaves explicitly registered names alone.
+Discovery does not replace signature checks or dependency-ordered startup,
+and it does not auto-import files or create functors.
+
 ## Module lifecycle
 
 ```text

@@ -14,7 +14,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 JAR = ROOT / "ow-lang" / "target" / "OwIDE.jar"
-APP = ROOT / "examples" / "bookstore" / "main.ow"
+APP = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "examples" / "bookstore" / "main.ow"
 BASE = "http://127.0.0.1:8080"
 
 def request(path, *, method="GET", data=None):

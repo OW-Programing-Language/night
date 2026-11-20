@@ -1,0 +1,62 @@
+import "../src/NightApp.ow"
+
+# These native components use the same typed Night contract as real applications.
+module_type DISCOVERY_SERVICE:
+  include NIGHT_COMPONENT
+  fn value() -> int
+
+module Example.Base: DISCOVERY_SERVICE
+  fn name() -> string:
+    return: "base"
+  fn requires() -> array:
+    return: []
+  fn register() -> int:
+    return: 0
+  fn start() -> int:
+    print: "START native base"
+    return: 0
+  fn mount() -> int:
+    return: 0
+  fn stop() -> int:
+    print: "STOP native base"
+    return: 0
+  fn on_event(type string, payload int) -> int:
+    return: 0
+  fn value() -> int:
+    return: 7
+
+functor MakeDiscovery(Source: DISCOVERY_SERVICE) -> DISCOVERY_SERVICE:
+  fn name() -> string:
+    return: "derived"
+  fn requires() -> array:
+    return: ["base"]
+  fn register() -> int:
+    return: 0
+  fn start() -> int:
+    print: "START native derived"
+    return: 0
+  fn mount() -> int:
+    return: 0
+  fn stop() -> int:
+    print: "STOP native derived"
+    return: 0
+  fn on_event(type string, payload int) -> int:
+    return: 0
+  fn value() -> int:
+    return: Source.value()
+
+main:
+  set dependent DISCOVERY_SERVICE: MakeDiscovery(Example.Base)
+  set night: new NightApp()
+  # Manual registration must remain valid and take precedence by name.
+  call: night.use_native_as(Example.Base, "DISCOVERY_SERVICE")
+  call: assert(night.discover_native() == 1, "auto-register derived module")
+  call: assert(night.discover_native() == 0, "discovery is idempotent")
+  call: assert(night.count == 2, "no duplicate provider")
+  call: assert(night.boot() == 1, "discovered modules boot")
+  call: assert(night.names[night.order[0]] == "base", "dependencies first")
+  call: assert(night.names[night.order[1]] == "derived", "dependent second")
+  set service DISCOVERY_SERVICE: night.service("derived")
+  call: assert(service.value() == 7, "original typed functor remains available")
+  call: assert(night.stop() == 1, "discovered modules stop")
+  print: "PASS Night native component discovery"
