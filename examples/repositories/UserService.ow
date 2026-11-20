@@ -33,5 +33,9 @@ class UserService:
     return: this.users.page("-score", limit, offset)
 
   @Transactional
+  fn rename(id int, username string) -> int:
+    return: this.users.updateById(id, {username: username})
+
+  @Transactional
   fn delete(id int) -> int:
     return: this.users.deleteById(id)
