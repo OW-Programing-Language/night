@@ -1,0 +1,11 @@
+# Applied ONLY by .github/workflows/network-partition.yml.
+# The shared 3-member quorum Compose topology and its existing CI tests
+# remain unchanged.
+services:
+  rmq-1:
+    volumes: &partition_config
+      - ./rabbitmq-live-partition.conf:/etc/rabbitmq/rabbitmq.conf:ro
+  rmq-2:
+    volumes: *partition_config
+  rmq-3:
+    volumes: *partition_config
