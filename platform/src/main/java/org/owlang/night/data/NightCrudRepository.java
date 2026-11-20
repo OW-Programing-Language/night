@@ -54,6 +54,28 @@ public final class NightCrudRepository {
                 placeholders + ")", new ArrayList<>(values.values()));
     }
 
+    /** Explicitly update non-ID fields of one row; never silently insert. */
+    public int updateById(String table, String idColumn, Object id, Object patch) {
+        String safeTable = identifier(table);
+        String safeId = identifier(idColumn);
+        if (!(patch instanceof Interpreter.OwRecord record) ||
+                record.isEmpty() || record.size() > 32)
+            throw new IllegalArgumentException("Repository.updateById expects 1..32 named fields");
+        Map<String, Object> values = new TreeMap<>();
+        for (Map.Entry<String, Object> field : record.entrySet()) {
+            String column = identifier(field.getKey());
+            if (safeId.equals(column))
+                throw new IllegalArgumentException("Repository.updateById cannot modify the ID column");
+            values.put(column, value(field.getValue()));
+        }
+        String assignments = String.join(", ",
+                values.keySet().stream().map(column -> column + " = ?").toList());
+        List<Object> args = new ArrayList<>(values.values());
+        args.add(value(id));
+        return jdbc.execute("UPDATE " + safeTable + " SET " + assignments +
+                " WHERE " + safeId + " = ?", args);
+    }
+
     /** Returns an OW record or the numeric sentinel 0 if the row is absent. */
     public Object findById(String table, String idColumn, Object id) {
         List<Interpreter.OwRecord> found = jdbc.query(
