@@ -20,6 +20,7 @@ class NightApp:
   field event_count
   field last_event
   field mounted
+  field controllers_mounted
 
   fn new():
     set this.modules: array(64, 0)
@@ -34,6 +35,7 @@ class NightApp:
     set this.event_count: 0
     set this.last_event: ""
     set this.mounted: 0
+    set this.controllers_mounted: 0
     return: 0
 
   fn index_of(name):
@@ -97,6 +99,26 @@ class NightApp:
         set added: added + 1
       set i: i + 1
     return: added
+
+  # Mount each imported @Controller singleton after Night's module graph
+  # successfully boots. OW's component container injects @Service fields.
+  # Each controller exposes an OW mount() method which registers its routes.
+  # Routes are not unregistered by stop(), so mounting is one-shot.
+  fn mount_controllers():
+    call: assert(this.booted == 1, "Night: controllers require a successful boot")
+    if: this.controllers_mounted == 1
+      return: 0
+    set controllers: component_scan("Controller")
+    set i int: 0
+    while: i < len(controllers)
+      set controller: controllers[i]
+      if: controller.mount() < 0
+        print: "Night: annotated controller mount failed"
+        call: this.stop()
+        return: 0
+      set i: i + 1
+    set this.controllers_mounted: 1
+    return: len(controllers)
 
   fn service(name):
     set index int: this.index_of(name)
