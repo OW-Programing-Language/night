@@ -44,7 +44,10 @@ Compose projects. It discovers the running service containers via Compose,
 uses `docker network disconnect --force` to sever their **broker** network,
 and verifies through Docker inspection that the container remains running
 and its network attachment was removed. Healing uses `docker network
-connect --alias <service>` and verifies the attachment is restored.
+connect --ip <original-IP> --alias <service>` and verifies the attachment is
+restored. The script records the original broker IPv4 on the CI runner so
+Erlang and Kafka peer connections do not inherit an artificial address
+change when connectivity returns.
 
 This is **real Docker bridge network disconnection**, rather than
 `SIGKILL` or a hypothetical partition. It does not simulate arbitrary
