@@ -1,0 +1,12 @@
+format: 1
+repositories: []
+dependencies: []
+
+# Night reads this optional section. OW's dependency installer continues
+# to use the standard fields above. No passwords or tokens belong here.
+night:
+  starters:
+    - core
+    - data
+    - cache
+    - actuator
