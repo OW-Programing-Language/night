@@ -1,0 +1,16 @@
+# Smart Night boot with automatic, fail-closed platform configuration.
+# Run with OW runtime + Night platform on the classpath and NIGHT_JDBC_*
+# environment variables set (H2 may use an empty NIGHT_JDBC_PASSWORD).
+import "../../src/modules/config/NightAutoConfig.ow"
+import "../../src/modules/data/NightData.ow"
+
+main:
+  set auto: new NightAutoConfig()
+  call: assert(auto.apply("examples/autoconfig/dependencies.yml") == 1)
+  call: assert(auto.enabled("data") == 1, "data starter configured")
+  call: assert(auto.enabled("cache") == 1, "cache starter configured")
+  call: assert(auto.enabled("security") == 0, "security not enabled implicitly")
+  set database: new NightData()
+  call: assert(database.healthy() == 1, "JDBC pool opened")
+  call: assert(auto.apply("examples/autoconfig/dependencies.yml") == 1, "idempotent startup")
+  print: "PASS Night dependency-based auto-configuration"
