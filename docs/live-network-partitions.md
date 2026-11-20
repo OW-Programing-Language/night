@@ -83,6 +83,17 @@ majority availability; merely opening an AMQP socket is insufficient.
 After reconnecting, it waits for all three running cluster members
 before testing new confirmed messages.
 
+For the **one-node minority** negative test, the readiness check is
+different: all three broker *containers* must still be running, the
+current queue leader must retain its Docker network attachment, and
+both other broker endpoints must be detached. The test does **not**
+require the minority management API to respond or report only one
+running node: `pause_minority` can deliberately stop the RabbitMQ
+application and management listener without stopping the container.
+The definitive safety assertion is that Night cannot obtain a
+publisher confirmation, followed by an unchanged PostgreSQL inbox.
+A stopped broker process or an unverified network cut is a test failure.
+
 ## Why PostgreSQL and message ID matter
 
 A failed publisher acknowledgement is **ambiguous**: it is not proof
