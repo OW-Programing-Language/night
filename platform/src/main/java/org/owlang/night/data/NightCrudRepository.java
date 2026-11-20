@@ -4,6 +4,7 @@ import dev.oreo.Interpreter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -59,7 +60,7 @@ public final class NightCrudRepository {
                 "SELECT * FROM " + identifier(table) + " WHERE " +
                         identifier(idColumn) + " = ?",
                 List.of(value(id)));
-        return found.isEmpty() ? 0 : found.get(0);
+        return found.isEmpty() ? 0 : normalize(found.get(0));
     }
 
     public int existsById(String table, String idColumn, Object id) {
@@ -93,7 +94,20 @@ public final class NightCrudRepository {
         String safeSort = identifier(descending ? order.substring(1) : order);
         String direction = descending ? " DESC" : " ASC";
         String tieBreak = safeSort.equals(safeId) ? "" : ", " + safeId + " ASC";
-        return jdbc.query("SELECT * FROM " + safeTable + " ORDER BY " +
+        List<Interpreter.OwRecord> rows = jdbc.query("SELECT * FROM " + safeTable + " ORDER BY " +
                 safeSort + direction + tieBreak + " LIMIT ? OFFSET ?", List.of(limit, offset));
+        return rows.stream().map(NightCrudRepository::normalize).toList();
+    }
+
+    // H2 produces uppercase labels for unquoted columns, while PostgreSQL
+    // produces lowercase. Expose consistent OW record keys for both drivers.
+    private static Interpreter.OwRecord normalize(Interpreter.OwRecord row) {
+        Interpreter.OwRecord result = new Interpreter.OwRecord();
+        row.forEach((name, value) -> {
+            String normalized = name.toLowerCase(Locale.ROOT);
+            if (result.putIfAbsent(normalized, value) != null)
+                throw new IllegalStateException("Conflicting SQL column labels: " + normalized);
+        });
+        return result;
     }
 }
