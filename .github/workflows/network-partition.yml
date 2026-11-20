@@ -283,31 +283,32 @@ jobs:
               bash tests/ha/network-partition.sh isolate night-rmq-partition tests/ha/rabbitmq-three-node.yml "rmq-$node"
             fi
           done
+          echo "RABBIT_MINORITY_SURVIVOR=$survivor" >> "$GITHUB_ENV"
           echo "NIGHT_RABBITMQ_URL=amqp://night_test:night_ci_password@127.0.0.1:$port/%2F" >> "$GITHUB_ENV"
-          echo "RabbitMQ leader stays alive and reachable but is now a one-node minority"
-      - name: Wait for RabbitMQ leader to recognize both followers as unavailable
+          echo "Actual queue leader remains network-attached; both other live members are disconnected"
+      - name: Verify all three RabbitMQ processes are alive and minority network isolation is real
         run: |
           set -euo pipefail
-          # The minority leader is kept reachable; wait for cluster metadata
-          # to report just one running peer before asserting publisher safety.
-          # Map AMQP host port 5672/5673/5674 to management 15672/15673/15674.
-          case "$NIGHT_RABBITMQ_URL" in
-            *:5672/*) management_port=15672 ;;
-            *:5673/*) management_port=15673 ;;
-            *:5674/*) management_port=15674 ;;
-            *) echo "Unexpected RabbitMQ URL"; exit 1 ;;
-          esac
-          ready=0
-          for attempt in $(seq 1 100); do
-            nodes="$(curl -fsS --max-time 3 -u night_test:night_ci_password "http://127.0.0.1:$management_port/api/nodes" 2>/dev/null || true)"
-            if printf '%s' "$nodes" | jq -e '([.[] | select(.running == true)] | length) == 1' >/dev/null 2>&1; then
-              echo "RabbitMQ reachable leader is a recognized one-node minority"
-              ready=1
-              break
+          network="night-rmq-partition_default"
+          docker network inspect "$network" >/dev/null
+          case "$RABBIT_MINORITY_SURVIVOR" in 1|2|3) ;; *) echo "Invalid survivor"; exit 1 ;; esac
+          for node in 1 2 3; do
+            cid="$(docker compose -p night-rmq-partition -f tests/ha/rabbitmq-three-node.yml ps -q "rmq-$node")"
+            test -n "$cid" || { echo "Missing broker rmq-$node"; exit 1; }
+            running="$(docker inspect -f '{{.State.Running}}' "$cid")"
+            test "$running" = true || { echo "Broker rmq-$node stopped; not a live partition"; exit 1; }
+            attached="$(docker inspect "$cid" | jq -r --arg net "$network" '.[0].NetworkSettings.Networks | has($net)')"
+            if [ "$node" = "$RABBIT_MINORITY_SURVIVOR" ]; then
+              test "$attached" = true || { echo "Actual queue leader is not network-attached"; exit 1; }
+            else
+              test "$attached" = false || { echo "Follower rmq-$node is not isolated"; exit 1; }
             fi
-            sleep 2
+            echo "rmq-$node: process running=$running, broker-network attached=$attached"
           done
-          test "$ready" -eq 1 || { echo "RabbitMQ minority status not observed"; exit 1; }
+          # No management-API running-node count here: RabbitMQ's test-only
+          # pause_minority policy can intentionally stop its application,
+          # making the HTTP management endpoint disappear on the minority.
+          # Only a real unconfirmed publish in the next step proves safety.
       - name: Verify RabbitMQ minority cannot confirm new writes
         run: timeout 120s mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=minority test
       - name: Reconnect all RabbitMQ nodes without restarting any broker process
