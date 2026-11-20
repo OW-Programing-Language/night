@@ -75,7 +75,8 @@ call: assert(night.boot() == 1)
 ```
 
 The `NightApp.discover_native()` call registers only modules not already
-registered by name; **explicit registration takes precedence**. Repeated calls
+registered by name; **explicit registration takes precedence**. Two different
+compatible native modules declaring the same Night name are rejected. Repeated calls
 before boot are safe. Calling it after boot is rejected. The usual dependency
 verification, cycle detection, startup ordering, rollback and route mounting
 remain unchanged. Discovery does not instantiate functors, import files
