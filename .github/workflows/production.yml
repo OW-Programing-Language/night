@@ -18,7 +18,7 @@ jobs:
         with:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
-          ref: b5f037a4ab010071288a4dabeb2d8e7e1354c8f8
+          ref: 131aeb3d8015d1da34e78d6c68521b82d6edc796
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -113,7 +113,7 @@ jobs:
         with:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
-          ref: b5f037a4ab010071288a4dabeb2d8e7e1354c8f8
+          ref: 131aeb3d8015d1da34e78d6c68521b82d6edc796
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
