@@ -101,9 +101,23 @@ and is not yet supported by the native LLVM backend. See the
 [auto-discovery bookstore](examples/bookstore/auto_main.ow) and
 [guide](docs/guide.md).
 
+## Smart starter auto-configuration (experimental)
+
+Night optionally reads a `night:` section from the standard OW
+`dependencies.yml` manifest. Declare the desired starters and call
+`NightAutoConfig.apply("dependencies.yml")` **before starting the HTTP
+server**. The Night platform configures selected JDBC, Redis, Kafka, RabbitMQ
+and security adapters, while passive starters remain available for explicit
+OW imports and route mounting. Unknown or conflicting settings fail early,
+and secrets remain in `NIGHT_*` environment variables.
+
+See [smart auto-configuration](docs/auto-configuration.md) and the
+[runnable OW example](examples/autoconfig/main.ow). This is opt-in and
+does not silently enable authentication, data access or brokers.
+
 ## Documentation
 
-[Production and security guide](docs/production.md) ·
+[Production and security guide](docs/production.md) · [Smart auto-configuration](docs/auto-configuration.md) ·
 [Spring module feature matrix](docs/starters.md) · [Full Spring-inspired ecosystem architecture](docs/spring-ecosystem.md) ·
 [Modulith architecture](docs/modules.md) ·
 [Bookstore example](examples/bookstore/README.md) ·

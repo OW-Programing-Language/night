@@ -5,6 +5,7 @@ import dev.oreo.Interpreter;
 import dev.oreo.RuntimeExtension;
 import org.owlang.night.actuator.NightMetrics;
 import org.owlang.night.cache.NightCache;
+import org.owlang.night.config.NightAutoConfiguration;
 import org.owlang.night.data.NightJdbc;
 import org.owlang.night.data.NightRepository;
 import org.owlang.night.data.NightRedis;
@@ -23,6 +24,8 @@ import org.owlang.night.messaging.NightKafka;
 import org.owlang.night.security.NightIpQuota;
 
 import java.util.List;
+import java.io.IOException;
+import java.nio.file.Path;
 
 /**
  * Night core starter: security middleware, external configuration, JDBC,
@@ -47,6 +50,8 @@ public final class NightExtension implements RuntimeExtension {
     private final NightRedis redis = new NightRedis();
     private final NightRedisStreams streams = new NightRedisStreams(redis);
     private volatile NightHttpClient outboundHttp;
+    private NightAutoConfiguration.Plan activeConfig;
+    private boolean configAttempted;
 
     private NightHttpClient outboundHttp() {
         NightHttpClient ready = outboundHttp;
@@ -176,6 +181,22 @@ public final class NightExtension implements RuntimeExtension {
             case "night.http.get" -> {
                 arity(operation, args, 1);
                 yield outboundHttp().get(string(args, 0));
+            }
+            case "night.autoconfig.apply" -> {
+                arity(operation, args, 1);
+                yield applyAutoConfiguration(string(args, 0));
+            }
+            case "night.autoconfig.enabled" -> {
+                arity(operation, args, 1);
+                if (activeConfig == null)
+                    throw new IllegalStateException("Night auto-configuration has not been applied");
+                yield activeConfig.has(string(args, 0)) ? 1 : 0;
+            }
+            case "night.autoconfig.starters" -> {
+                arity(operation, args, 0);
+                if (activeConfig == null)
+                    throw new IllegalStateException("Night auto-configuration has not been applied");
+                yield activeConfig.ordered();
             }
             case "night.config.get" -> {
                 arity(operation, args, 1);
@@ -376,6 +397,47 @@ public final class NightExtension implements RuntimeExtension {
             default -> throw new IllegalArgumentException(
                     "Unknown Night platform operation " + operation);
         };
+    }
+
+    /**
+     * Apply each selected starter at most once. A failed initialization
+     * invalidates further attempts for this extension instance; existing
+     * applications that do not opt in are unaffected.
+     */
+    private synchronized int applyAutoConfiguration(String manifest) {
+        NightAutoConfiguration.Plan plan;
+        try {
+            plan = NightAutoConfiguration.read(Path.of(manifest));
+        } catch (IOException ex) {
+            throw new IllegalStateException("Cannot read Night dependency manifest: " + manifest, ex);
+        }
+        if (activeConfig != null) {
+            if (activeConfig.equals(plan)) return 1;
+            throw new IllegalStateException("Night configuration cannot change after startup");
+        }
+        if (configAttempted)
+            throw new IllegalStateException("Night configuration startup already failed; restart the process");
+        configAttempted = true;
+        try {
+            // Deterministic service order. Passive starter APIs are available
+            // through the OW module imports; they need no Java-side startup.
+            if (plan.has("data")) {
+                jdbc.open();
+                if (!plan.migrations().isEmpty()) jdbc.migrate(plan.migrations());
+            }
+            if (plan.has("redis")) redis.open();
+            if (plan.has("kafka")) kafka.open();
+            if (plan.has("rabbitmq")) rabbitmq.open();
+            // Authentication is enabled last and always fails closed when
+            // required credentials are missing or invalid.
+            if (plan.has("security")) security.enable();
+        } catch (RuntimeException failure) {
+            try { close(); } catch (RuntimeException cleanup) { failure.addSuppressed(cleanup); }
+            throw new IllegalStateException("Night starter initialization failed: " +
+                    failure.getMessage(), failure);
+        }
+        activeConfig = plan;
+        return 1;
     }
 
     private static void arity(String name, List<?> arguments, int expected) {

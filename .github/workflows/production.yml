@@ -46,6 +46,11 @@ jobs:
           if-no-files-found: error
       - name: Validate production example and imported native modules
         run: java -cp "ow-lang/target/OwIDE.jar:platform/target/night-platform-0.2.0-SNAPSHOT.jar" dev.oreo.Main check examples/production/main.ow
+      - name: Verify manifest-based Night auto-configuration through real OW interpreter
+        run: |
+          java -cp "ow-lang/target/OwIDE.jar:platform/target/night-platform-0.2.0-SNAPSHOT.jar" dev.oreo.Main check examples/autoconfig/main.ow
+          java -cp "ow-lang/target/OwIDE.jar:platform/target/night-platform-0.2.0-SNAPSHOT.jar" dev.oreo.Main run examples/autoconfig/main.ow | tee /tmp/night-autoconfig.log
+          grep -q "PASS Night dependency-based auto-configuration" /tmp/night-autoconfig.log
       - name: Run live secured HTTP + JDBC smoke integration
         run: python3 tests/production_smoke.py
 
