@@ -1,0 +1,13 @@
+# Verify no explicit controller.mount() is needed for annotated endpoints.
+import "../src/NightApp.ow"
+import "../src/modules/data/NightData.ow"
+import "../examples/mapped-transactions/EntryService.ow"
+import "../examples/mapped-transactions/EntryController.ow"
+
+main:
+  set night: new NightApp()
+  call: assert(night.boot() == 1)
+  call: assert(night.mount_controllers() == 1, "one controller discovered")
+  call: assert(night.mount_controllers() == 0, "mounting idempotent")
+  call: assert(night.stop() == 1)
+  print: "PASS Night automatic @GetMapping/@PostMapping mounting"
