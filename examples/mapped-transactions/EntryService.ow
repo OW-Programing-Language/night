@@ -1,0 +1,33 @@
+# OW-native singleton. JDBC transactions are managed by @Transactional.
+@Service
+class EntryService:
+  @Transactional
+  fn insert_record(id int, value string) -> int:
+    set db: new NightData()
+    return: db.execute(
+      "INSERT INTO night_annotation_entries(id, label) VALUES (?, ?)",
+      [id, value]
+    )
+
+  @Transactional
+  fn insert_then_fail(id int, value string) -> int:
+    call: this.insert_record(id, value)
+    throw: "intentional transaction rollback"
+
+  # Even when the nested error is caught, REQUIRED propagation means
+  # the transaction is rollback-only; the caller cannot commit it.
+  @Transactional
+  fn catch_inner_failure(id int, value string) -> int:
+    try:
+      call: this.insert_then_fail(id, value)
+    catch error:
+      print: "Night nested failure caught in service"
+    return: 1
+
+  fn row_count(id int) -> int:
+    set db: new NightData()
+    set rows: db.query(
+      "SELECT id FROM night_annotation_entries WHERE id = ?",
+      [id]
+    )
+    return: len(rows)
