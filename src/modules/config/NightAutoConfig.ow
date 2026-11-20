@@ -1,0 +1,15 @@
+# Opt-in Spring Boot-style Night starter setup.
+# Reads an OW dependencies.yml with a Night-specific 'night:' section.
+# Call apply() before mounting any routes or serving HTTP.
+class NightAutoConfig:
+  fn new():
+    return: 0
+
+  fn apply(path):
+    return: extension("night.autoconfig.apply", path)
+
+  fn enabled(starter):
+    return: extension("night.autoconfig.enabled", starter)
+
+  fn starters():
+    return: extension("night.autoconfig.starters")
