@@ -112,7 +112,9 @@ class NightApp:
     set i int: 0
     while: i < len(controllers)
       set controller: controllers[i]
-      if: controller.mount() < 0
+      # OW maps @GetMapping/@PostMapping methods automatically.
+      # Legacy controllers without method annotations still invoke mount().
+      if: component_mount(controller) < 0
         print: "Night: annotated controller mount failed"
         call: this.stop()
         return: 0
