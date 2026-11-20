@@ -23,6 +23,11 @@ class UserController:
     call: this.users.create(id, body())
     return: response(201, {id: id, created: 1})
 
+  @PostMapping("/api/users/:id/rename")
+  fn rename():
+    set id int: int(param("id"))
+    return: {updated: this.users.rename(id, body())}
+
   @PostMapping("/api/users/:id/fail")
   fn fail():
     set id int: int(param("id"))
