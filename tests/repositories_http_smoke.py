@@ -83,6 +83,11 @@ def main():
                 sorted_page = expect("/api/users/page?limit=2&offset=0", 200)
                 assert [row["id"] for row in sorted_page] == [3, 2], sorted_page
 
+                # Update is explicit, returns row count and shares @Transactional.
+                assert expect("/api/users/1/rename", 200, method="POST",
+                              body="renamed") == {"updated": 1}
+                assert expect("/api/users/1", 200)["username"] == "renamed"
+
                 # Duplicate inserts do not silently overwrite existing data.
                 expect("/api/users/2", 500, method="POST", body="overwrite")
                 assert expect("/api/users/2", 200)["username"] == "beta"
