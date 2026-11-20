@@ -1,0 +1,12 @@
+# Requires OW runtime with @Service/@Controller/@Inject (ow-lang PR #63).
+import "../../src/NightApp.ow"
+import "GreetingService.ow"
+import "GreetingController.ow"
+
+main:
+  set night: new NightApp()
+  call: assert(night.boot() == 1, "Night composition boot")
+  call: assert(night.mount_controllers() == 1, "one annotated controller mounted")
+  call: night.mount_system()
+  print: "Night annotated controller ready at http://localhost:8080"
+  serve: 8080
