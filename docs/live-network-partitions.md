@@ -80,8 +80,14 @@ https://www.rabbitmq.com/docs/4.1/partitions
 The workflow waits for the Erlang `net_tick_timeout` peer-loss
 detection and actual quorum leader change before declaring surviving
 majority availability; merely opening an AMQP socket is insufficient.
-After reconnecting, it waits for all three running cluster members
-before testing new confirmed messages.
+Before reconnecting an **isolated former leader**, CI also waits for
+that node's own Erlang distribution logs to confirm `net_tick_timeout`
+for **both** peers, using logs since the fault timestamp. This prevents
+a race observed in CI where the majority was ready but the isolated
+node had not yet recognized the partition: reconnecting at that
+point produced `Mnesia inconsistent_database` events. After reconnecting,
+the workflow waits for all three running cluster members before testing
+new confirmed messages.
 
 For the **one-node minority** negative test, the readiness check is
 different: all three broker *containers* must still be running, the
