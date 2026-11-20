@@ -41,6 +41,11 @@ class NightCrudRepositoryTest {
                         .get(0).get("score")).intValue());
                 assertEquals(10, ((Number) repo.page(TABLE, "id", "-score", 1, 1)
                         .get(0).get("score")).intValue());
+                Interpreter.OwRecord patch = new Interpreter.OwRecord();
+                patch.put("username", "gamma-updated");
+                assertEquals(1, repo.updateById(TABLE, "id", 3, patch));
+                assertEquals(0, repo.updateById(TABLE, "id", 999, patch));
+                assertEquals("gamma-updated", ((Interpreter.OwRecord) repo.findById(TABLE, "id", 3)).get("username"));
                 assertEquals(1, repo.deleteById(TABLE, "id", 2));
                 assertEquals(0, repo.deleteById(TABLE, "id", 2));
                 assertEquals(2, repo.findAll(TABLE, "id").size());
@@ -98,6 +103,14 @@ class NightCrudRepositoryTest {
             assertThrows(IllegalArgumentException.class, () -> repo.save("users", "id", nullValue));
             assertThrows(IllegalArgumentException.class, () ->
                     repo.save("users", "id", "not a record"));
+            Interpreter.OwRecord idUpdate = new Interpreter.OwRecord();
+            idUpdate.put("id", 42);
+            assertThrows(IllegalArgumentException.class, () ->
+                    repo.updateById("users", "id", 1, idUpdate));
+            Interpreter.OwRecord unsafePatch = new Interpreter.OwRecord();
+            unsafePatch.put("name;DELETE", "x");
+            assertThrows(IllegalArgumentException.class, () ->
+                    repo.updateById("users", "id", 1, unsafePatch));
         }
     }
 }
