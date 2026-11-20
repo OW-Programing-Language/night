@@ -310,6 +310,9 @@ jobs:
             rabbit@rmq-3) survivor=3; port=5674 ;;
             *) echo "Unknown RabbitMQ queue leader: $leader"; exit 1 ;;
           esac
+          # Used by the healing barrier to distinguish this split from
+          # the earlier single-leader partition in the same Docker cluster.
+          echo "RABBIT_MINOR_ISOLATION_TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
           for node in 1 2 3; do
             if [ "$node" != "$survivor" ]; then
               bash tests/ha/network-partition.sh isolate night-rmq-partition tests/ha/rabbitmq-three-node.yml "rmq-$node"
@@ -343,6 +346,33 @@ jobs:
           # Only a real unconfirmed publish in the next step proves safety.
       - name: Verify RabbitMQ minority cannot confirm new writes
         run: timeout 120s mvn -B -f platform/pom.xml -Dtest=NightRabbitQuorumFailoverTest -Dnight.ha.phase=minority test
+      - name: Wait for all three RabbitMQ peers to finish Erlang partition detection
+        run: |
+          set -euo pipefail
+          # Each broker is now on its own isolated Docker endpoint. A
+          # fail-closed publish may finish before Erlang's peer timeout.
+          # Reconnecting too early races pause_minority and can leave
+          # Mnesia inconsistent, even when the broker process stays alive.
+          for node in 1 2 3; do
+            cid="$(docker compose -p night-rmq-partition -f tests/ha/rabbitmq-three-node.yml ps -q "rmq-$node")"
+            test -n "$cid"
+            for peer in 1 2 3; do
+              if [ "$peer" = "$node" ]; then continue; fi
+              observed=0
+              for attempt in $(seq 1 90); do
+                if docker logs --since "$RABBIT_MINOR_ISOLATION_TIMESTAMP" "$cid" 2>&1 |
+                  grep -F "node 'rabbit@rmq-$peer' down: net_tick_timeout" >/dev/null; then
+                  observed=1
+                  echo "rmq-$node detected partition from rmq-$peer"
+                  break
+                fi
+                sleep 2
+              done
+              test "$observed" -eq 1 || { echo "rmq-$node did not recognize isolated rmq-$peer"; exit 1; }
+            done
+            test "$(docker inspect -f '{{.State.Running}}' "$cid")" = true
+          done
+          sleep 8
       - name: Reconnect all RabbitMQ nodes without restarting any broker process
         run: |
           set -euo pipefail
