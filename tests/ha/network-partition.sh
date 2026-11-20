@@ -18,6 +18,11 @@ case "$project" in night-kafka-partition|night-rmq-partition) ;;
 esac
 network="${project}_default"
 docker network inspect "$network" >/dev/null
+# Docker can assign a different IP on network reconnect; restoring the
+# original IPv4 endpoint is important to Erlang distribution and Kafka
+# peers that can cache each other's addresses during a network partition.
+state_dir="${RUNNER_TEMP:-/tmp}/night-live-partition/${project}"
+mkdir -p "$state_dir"
 
 for service in "$@"; do
   case "$project:$service" in
@@ -35,11 +40,24 @@ for service in "$@"; do
   attached="$(docker inspect "$cid" | jq -r --arg net "$network" '.[0].NetworkSettings.Networks | has($net)')"
 
   if [ "$action" = isolate ] && [ "$attached" = true ]; then
+    original_ip="$(docker inspect "$cid" | jq -r --arg net "$network" '.[0].NetworkSettings.Networks[$net].IPAddress // empty')"
+    if [[ ! "$original_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      echo "Cannot preserve original Docker broker IPv4 for $service" >&2
+      exit 1
+    fi
+    printf '%s\n' "$original_ip" > "$state_dir/$service.ip"
     docker network disconnect --force "$network" "$cid"
   elif [ "$action" = heal ] && [ "$attached" = false ]; then
-    # Kafka KRaft voters and RabbitMQ Erlang distribution resolve these
-    # well-known names inside the original Compose broker network.
-    docker network connect --alias "$service" "$network" "$cid"
+    ip_file="$state_dir/$service.ip"
+    if [ ! -s "$ip_file" ]; then
+      echo "No recorded pre-partition broker IPv4 for $service" >&2
+      exit 1
+    fi
+    original_ip="$(cat "$ip_file")"
+    # Reattach with the SAME IP and DNS alias. A new arbitrary endpoint
+    # can prevent automatic healing because existing broker sessions and
+    # Erlang distribution cache the old peer IP.
+    docker network connect --ip "$original_ip" --alias "$service" "$network" "$cid"
   fi
 
   still_running="$(docker inspect -f '{{.State.Running}}' "$cid")"
