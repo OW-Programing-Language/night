@@ -1,0 +1,39 @@
+import "../src/NightApp.ow"
+
+# A runtime scan must reject two independent modules with the same Night name.
+module A: NIGHT_COMPONENT
+  fn name() -> string:
+    return: "collision"
+  fn requires() -> array:
+    return: []
+  fn register() -> int:
+    return: 0
+  fn start() -> int:
+    return: 0
+  fn mount() -> int:
+    return: 0
+  fn stop() -> int:
+    return: 0
+  fn on_event(type string, payload int) -> int:
+    return: 0
+
+module B: NIGHT_COMPONENT
+  fn name() -> string:
+    return: "collision"
+  fn requires() -> array:
+    return: []
+  fn register() -> int:
+    return: 0
+  fn start() -> int:
+    return: 0
+  fn mount() -> int:
+    return: 0
+  fn stop() -> int:
+    return: 0
+  fn on_event(type string, payload int) -> int:
+    return: 0
+
+main:
+  set night: new NightApp()
+  call: night.discover_native()
+  print: "ERROR: conflicting discovered component names were accepted"
