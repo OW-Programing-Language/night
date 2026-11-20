@@ -4,10 +4,7 @@ class EntryService:
   @Transactional
   fn insert_record(id int, value string) -> int:
     set db: new NightData()
-    return: db.execute(
-      "INSERT INTO night_annotation_entries(id, label) VALUES (?, ?)",
-      [id, value]
-    )
+    return: db.execute("INSERT INTO night_annotation_entries(id, label) VALUES (?, ?)", [id, value])
 
   @Transactional
   fn insert_then_fail(id int, value string) -> int:
@@ -26,8 +23,5 @@ class EntryService:
 
   fn row_count(id int) -> int:
     set db: new NightData()
-    set rows: db.query(
-      "SELECT id FROM night_annotation_entries WHERE id = ?",
-      [id]
-    )
+    set rows: db.query("SELECT id FROM night_annotation_entries WHERE id = ?", [id])
     return: len(rows)
