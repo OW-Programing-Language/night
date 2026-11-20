@@ -70,6 +70,24 @@ class NightApp:
     call: this.use(component)
     return: source
 
+  # Runtime discovery of imported/public native OW modules and main-scope
+  # functor instances implementing NIGHT_COMPONENT. Existing explicit
+  # registrations take precedence by name, so old composition roots work.
+  # Opt in before boot; this does not search arbitrary files on disk.
+  fn discover_native():
+    call: assert(this.attempted == 0, "Night: cannot discover modules after boot")
+    set candidates: module_scan("NIGHT_COMPONENT")
+    set added int: 0
+    set i int: 0
+    while: i < len(candidates)
+      set source NIGHT_COMPONENT: candidates[i]
+      set key string: source.name()
+      if: this.index_of(key) == 99
+        call: this.use_native_as(source, "NIGHT_COMPONENT")
+        set added: added + 1
+      set i: i + 1
+    return: added
+
   fn service(name):
     set index int: this.index_of(name)
     call: assert(index != 99, "Night: unknown module service " + name)
