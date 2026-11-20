@@ -3,17 +3,19 @@ class UserController:
   @Inject
   field private users UserService
 
-  @GetMapping("/api/users/:id")
-  fn find():
-    return: this.users.find(int(param("id")))
+  # Register literal routes before /:id so the parameter route cannot
+  # shadow the fixed /page endpoint in OW's ordered HTTP dispatcher.
+  @GetMapping("/api/users/page")
+  fn page():
+    return: this.users.page(int(query("limit")), int(query("offset")))
 
   @GetMapping("/api/users")
   fn list():
     return: this.users.list()
 
-  @GetMapping("/api/users/page")
-  fn page():
-    return: this.users.page(int(query("limit")), int(query("offset")))
+  @GetMapping("/api/users/:id")
+  fn find():
+    return: this.users.find(int(param("id")))
 
   @PostMapping("/api/users/:id")
   fn create():
