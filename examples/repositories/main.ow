@@ -1,0 +1,17 @@
+# OW @Repository native methods use the same JDBC transaction as @Transactional.
+import "../../src/NightApp.ow"
+import "../../src/modules/data/NightData.ow"
+import "UserRepository.ow"
+import "UserService.ow"
+import "UserController.ow"
+
+main:
+  set db: new NightData()
+  call: assert(db.open() == 1, "open Night JDBC pool")
+  call: db.execute("CREATE TABLE IF NOT EXISTS night_repository_users (id INTEGER PRIMARY KEY, username VARCHAR(128), score INTEGER)", [])
+  set night: new NightApp()
+  call: assert(night.boot() == 1, "boot Night")
+  call: assert(night.mount_controllers() == 1, "mount repository-backed controller")
+  call: night.mount_system()
+  print: "Night repository CRUD ready at http://localhost:8080"
+  serve: 8080

@@ -1,0 +1,4 @@
+# Generated repository methods: save, findById, findAll, existsById,
+# deleteById, page. No handwritten SQL CRUD implementation required.
+@Repository("night_repository_users", "id")
+class UserRepository:
