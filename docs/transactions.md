@@ -29,4 +29,9 @@ Flyway forward migrations are enabled; automatic `clean` is disabled. SQL schema
 
 ## Remaining limitations
 
-OW does not yet provide structured `finally` or declarative transaction annotations. Night does not yet provide a higher-level transaction closure that guarantees rollback across arbitrary OW failures. PostgreSQL failover, concurrent migrations and restore drills on a deployed environment remain outstanding 1.0 gates.
+With the experimental OW language PR #64, `@Transactional` adds automatic
+JDBC begin/commit/rollback to annotated OW methods. Nested annotated calls
+join the outer transaction, and caught inner failures leave the transaction
+rollback-only. See [mapped transactions](mapped-transactions.md). The OW
+language already supports structured `finally`. A separate high-level
+transaction closure for arbitrary unannotated OW code is still not provided. PostgreSQL failover, concurrent migrations and restore drills on a deployed environment remain outstanding 1.0 gates.
