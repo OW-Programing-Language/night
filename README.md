@@ -148,7 +148,7 @@ No native LLVM, distributed XA or `REQUIRES_NEW` support is implied.
 
 Night now supports OW-native `@Repository("table", "id")` singletons,
 typed `@Inject` into services, and generated
-`save`, `findById`, `findAll`, `existsById`, `deleteById`,
+`save`, `updateById`, `findById`, `findAll`, `existsById`, `deleteById`,
 and bounded sorted `page` operations. They use the same pooled JDBC
 connection as `@Transactional` with REQUIRED propagation.
 
@@ -156,7 +156,7 @@ See [repository guide](docs/repositories.md) and
 [working OW example](examples/repositories/main.ow). The language
 annotation requires [OW PR #65](https://github.com/OW-Programing-Language/ow-lang/pull/65).
 This is a safe SQL repository adapter, not a full JPA ORM: no
-automatic schema generation, update/upsert, derived finder methods,
+automatic schema generation, upsert, derived finder methods,
 entity relationships, or LLVM native lowering.
 
 ## Documentation
