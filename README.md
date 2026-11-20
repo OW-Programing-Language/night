@@ -87,6 +87,20 @@ The Night Java platform is optional and installed via OW's
 `RuntimeExtension` ServiceLoader SPI. It provides real pre-controller
 security and JDBC rather than unsecured application-level helper stubs.
 
+## Native module auto-discovery (experimental)
+
+Night can now discover imported public OW modules and main-scope functor
+instances by their `NIGHT_COMPONENT` signature. Call
+`night.discover_native()` **before** `night.boot()`, rather than registering
+each native component manually. Explicit registration remains supported.
+
+`module_scan()` is introduced by the linked
+[OW runtime PR #62](https://github.com/OW-Programing-Language/ow-lang/pull/62).
+This runtime introspection is **opt-in**, does not auto-import arbitrary files
+and is not yet supported by the native LLVM backend. See the
+[auto-discovery bookstore](examples/bookstore/auto_main.ow) and
+[guide](docs/guide.md).
+
 ## Documentation
 
 [Production and security guide](docs/production.md) ·
