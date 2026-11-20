@@ -59,7 +59,34 @@ providers, duplicate module names and cycles; successful startup uses the
 topological dependency order, regardless of registration order. A negative
 `start()` return causes reverse-order rollback.
 
-## 4. Persistent models
+## 4. Automatically discover imported native modules (OW PR #62)
+
+With an OW interpreter supporting `module_scan("NIGHT_COMPONENT")`, Night can
+scan **already imported public modules and initialized main-scope functor
+instances**. This is opt-in and preserves old manual registration behavior:
+
+```ow
+# The composition root still imports and instantiates the business modules.
+set orders ORDERS: MakeOrders(Shop.Catalog)
+set notifications NOTIFICATIONS: MakeNotifications(orders)
+set night: new NightApp()
+call: assert(night.discover_native() == 3)
+call: assert(night.boot() == 1)
+```
+
+The `NightApp.discover_native()` call registers only modules not already
+registered by name; **explicit registration takes precedence**. Repeated calls
+before boot are safe. Calling it after boot is rejected. The usual dependency
+verification, cycle detection, startup ordering, rollback and route mounting
+remain unchanged. Discovery does not instantiate functors, import files
+implicitly, search project directories or expose private lexical modules.
+
+The runtime change is tracked in
+[ow-lang PR #62](https://github.com/OW-Programing-Language/ow-lang/pull/62).
+See [auto_main.ow](../examples/bookstore/auto_main.ow) and
+[discovery.ow](../tests/discovery.ow) for complete examples.
+
+## 5. Persistent models
 
 ```ow
 model Purchase:
@@ -83,7 +110,7 @@ OW models auto-persist to `ow-data.json` (override with `OW_DB_PATH`).
 filters. `delete Model where` removes matching rows. OW currently uses a
 local file, not relational SQL or schema migration.
 
-## 5. Events
+## 6. Events
 
 ```ow
 call: night.emit("order.placed", 1)
@@ -94,7 +121,7 @@ Events are synchronous and local, so avoid slow subscriber methods. This is
 closer to Spring Modulith's application events than to a durable broker.
 A PostgreSQL transactional outbox and separately supervised Kafka/RabbitMQ workers are now available through the optional Night platform; see [outbox dispatcher](outbox-dispatcher.md) and [consumer inbox](inbox.md). Synchronous `night.emit()` remains a local-only event mechanism.
 
-## 6. Live module operations
+## 7. Live module operations
 
 Night exposes `is_active`, `disable`, `enable`, `stop`, and
 `service(name)`. Disabling a provider with active dependents is rejected.
@@ -106,7 +133,7 @@ Repeated stop/restart of a single leaf module does not leak startup order
 entries. The whole application `boot` operation is one-shot; create a new
 NightApp to perform a full application restart.
 
-## 7. Health and inspection
+## 8. Health and inspection
 
 After `night.mount_system()`:
 
@@ -118,7 +145,7 @@ After `night.mount_system()`:
 These endpoints are **not authenticated**. Put the application behind
 appropriate network access controls in deployments.
 
-## 8. Verification
+## 9. Verification
 
 ```bash
 java -jar ow-lang/target/OwIDE.jar check examples/bookstore/main.ow
