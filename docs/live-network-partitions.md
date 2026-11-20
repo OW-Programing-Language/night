@@ -64,6 +64,25 @@ attempts to reattach all broker networks in `always()` cleanup and deletes
 the temporary containers and volumes afterwards. Repeated phases use
 `NIGHT_HA_RUN_ID` to avoid accidentally reusing durable event namespaces.
 
+## RabbitMQ network-partition handling
+
+The RabbitMQ 4.1 default partition mode is `ignore`, which can leave
+cluster metadata split after reconnecting a live isolated node. The lab
+therefore applies the **explicit `pause_minority` policy**, recommended for
+odd-sized RabbitMQ clusters, using
+`tests/ha/rabbitmq-live-partition.override.yml` and
+`rabbitmq-live-partition.conf`. CI verifies the effective setting on
+all three nodes before starting the fault injection. The existing
+RabbitMQ broker-kill workflow and Night's production adapter are not
+reconfigured. See the RabbitMQ 4.1 documentation:
+https://www.rabbitmq.com/docs/4.1/partitions
+
+The workflow waits for the Erlang `net_tick_timeout` peer-loss
+detection and actual quorum leader change before declaring surviving
+majority availability; merely opening an AMQP socket is insufficient.
+After reconnecting, it waits for all three running cluster members
+before testing new confirmed messages.
+
 ## Why PostgreSQL and message ID matter
 
 A failed publisher acknowledgement is **ambiguous**: it is not proof
