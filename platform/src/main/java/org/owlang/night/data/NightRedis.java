@@ -1,6 +1,6 @@
 package org.owlang.night.data;
 
-import redis.clients.jedis.JedisPooled;
+import redis.clients.jedis.RedisClient;
 
 import java.net.URI;
 
@@ -13,7 +13,7 @@ import java.net.URI;
  * integration tests with NIGHT_REDIS_ALLOW_INSECURE_LOOPBACK=true.
  */
 public final class NightRedis implements AutoCloseable {
-    private JedisPooled client;
+    private RedisClient client;
     private String namespace;
 
     public synchronized int open() {
@@ -25,7 +25,7 @@ public final class NightRedis implements AutoCloseable {
         String configured = System.getenv().getOrDefault("NIGHT_REDIS_NAMESPACE", "night");
         if (!configured.matches("[a-zA-Z][a-zA-Z0-9_-]{0,31}"))
             throw new IllegalArgumentException("Invalid Night Redis namespace");
-        JedisPooled next = new JedisPooled(url);
+        RedisClient next = RedisClient.create(url);
         try {
             if (!"PONG".equals(next.ping()))
                 throw new IllegalStateException("Night Redis health check failed");
@@ -57,7 +57,7 @@ public final class NightRedis implements AutoCloseable {
         return input;
     }
 
-    private JedisPooled ready() {
+    private RedisClient ready() {
         if (client == null) throw new IllegalStateException("Night Redis is not open");
         return client;
     }
@@ -67,7 +67,7 @@ public final class NightRedis implements AutoCloseable {
     // Redis Streams share the authenticated TLS pool while using a key prefix
     // deliberately inaccessible to the public cache-key grammar (the slash).
     // This prevents a cache operation from deleting or replacing a stream.
-    JedisPooled streamClient() { return ready(); }
+    RedisClient streamClient() { return ready(); }
 
     String streamKey(String input) {
         ready();
