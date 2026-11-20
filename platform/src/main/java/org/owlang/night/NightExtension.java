@@ -236,6 +236,11 @@ public final class NightExtension implements RuntimeExtension {
                 arity(operation, args, 3);
                 yield crud.save(string(args, 0), string(args, 1), args.get(2));
             }
+            case "night.data.repo.updateById" -> {
+                arity(operation, args, 4);
+                yield crud.updateById(string(args, 0), string(args, 1),
+                        args.get(2), args.get(3));
+            }
             case "night.data.repo.findById" -> {
                 arity(operation, args, 3);
                 yield crud.findById(string(args, 0), string(args, 1), args.get(2));
