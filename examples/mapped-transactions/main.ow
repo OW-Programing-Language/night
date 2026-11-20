@@ -8,10 +8,7 @@ import "EntryController.ow"
 main:
   set db: new NightData()
   call: assert(db.open() == 1, "JDBC connection")
-  call: db.execute(
-    "CREATE TABLE IF NOT EXISTS night_annotation_entries (id INT PRIMARY KEY, label VARCHAR(128))",
-    []
-  )
+  call: db.execute("CREATE TABLE IF NOT EXISTS night_annotation_entries (id INT PRIMARY KEY, label VARCHAR(128))", [])
   set night: new NightApp()
   call: assert(night.boot() == 1, "Night module boot")
   call: assert(night.mount_controllers() == 1, "annotated controller discovered")
