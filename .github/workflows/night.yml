@@ -15,7 +15,7 @@ jobs:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
           # Known OW runtime with native module/functor signatures and HTTP.
-          ref: 8c09323d270fd18e1e2d34306155b81c9ceb08c8
+          ref: 659371da25e5fe7dfe35b57bc9e5f38c26b1a018
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -33,6 +33,8 @@ jobs:
           java -jar ow-lang/target/OwIDE.jar check examples/bookstore/auto_main.ow
           java -jar ow-lang/target/OwIDE.jar check examples/controllers/main.ow
           java -jar ow-lang/target/OwIDE.jar check tests/controller_mount.ow
+          java -jar ow-lang/target/OwIDE.jar check examples/mapped-transactions/main.ow
+          java -jar ow-lang/target/OwIDE.jar check tests/mapped_mount.ow
           for file in tests/lifecycle.ow tests/rollback.ow tests/cycle.ow tests/missing_dependency.ow tests/restart.ow tests/discovery.ow; do
             java -jar ow-lang/target/OwIDE.jar check "$file"
           done
@@ -41,6 +43,7 @@ jobs:
           set -euo pipefail
           java -jar ow-lang/target/OwIDE.jar run tests/discovery.ow
           java -jar ow-lang/target/OwIDE.jar run tests/controller_mount.ow
+          java -jar ow-lang/target/OwIDE.jar run tests/mapped_mount.ow
           java -jar ow-lang/target/OwIDE.jar run tests/lifecycle.ow | tee /tmp/night-lifecycle.log
           java -jar ow-lang/target/OwIDE.jar run tests/rollback.ow | tee /tmp/night-rollback.log
           java -jar ow-lang/target/OwIDE.jar run tests/cycle.ow

@@ -18,7 +18,7 @@ jobs:
         with:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
-          ref: 3be777a7ee2c9204ebe653d89e749e0dcfe4b831
+          ref: 659371da25e5fe7dfe35b57bc9e5f38c26b1a018
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -53,6 +53,8 @@ jobs:
           grep -q "PASS Night dependency-based auto-configuration" /tmp/night-autoconfig.log
       - name: Run live secured HTTP + JDBC smoke integration
         run: python3 tests/production_smoke.py
+      - name: Verify annotated OW routes and transactional database atomicity
+        run: python3 tests/mapped_transactions_smoke.py
 
   postgres-integration:
     runs-on: ubuntu-latest
@@ -109,7 +111,7 @@ jobs:
         with:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
-          ref: 3be777a7ee2c9204ebe653d89e749e0dcfe4b831
+          ref: 659371da25e5fe7dfe35b57bc9e5f38c26b1a018
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
