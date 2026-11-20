@@ -1,0 +1,34 @@
+@Controller
+class UserController:
+  @Inject
+  field private users UserService
+
+  @GetMapping("/api/users/:id")
+  fn find():
+    return: this.users.find(int(param("id")))
+
+  @GetMapping("/api/users")
+  fn list():
+    return: this.users.list()
+
+  @GetMapping("/api/users/page")
+  fn page():
+    return: this.users.page(int(query("limit")), int(query("offset")))
+
+  @PostMapping("/api/users/:id")
+  fn create():
+    set id int: int(param("id"))
+    call: this.users.create(id, body())
+    return: response(201, {id: id, created: 1})
+
+  @PostMapping("/api/users/:id/fail")
+  fn fail():
+    set id int: int(param("id"))
+    call: this.users.create_then_fail(id, body())
+    return: {created: 1}
+
+  @PostMapping("/api/users/:id/caught")
+  fn caught():
+    set id int: int(param("id"))
+    call: this.users.catch_failure(id, body())
+    return: {created: 1}
