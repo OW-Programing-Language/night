@@ -129,9 +129,24 @@ See [annotated components](docs/annotated-components.md) and the
 This does not automatically infer routes or replace OW native modules;
 existing manual and module discovery APIs remain compatible.
 
+## OW-native method mappings and JDBC transactions (experimental)
+
+Controllers can now declare `@GetMapping("/path")` and
+`@PostMapping("/path")` on OW methods. Night registers them using
+`night.mount_controllers()` without a manual `mount()` method.
+OW `@Transactional` methods use Night's existing pooled JDBC adapter,
+committing on success and rolling back on failure; nested annotated calls
+join the outer transaction and propagate rollback-only when an inner call
+fails. This requires the companion
+[OW language PR #64](https://github.com/OW-Programing-Language/ow-lang/pull/64).
+
+See the [mapped-transactions guide](docs/mapped-transactions.md) and its
+[real H2-backed HTTP example](examples/mapped-transactions/main.ow).
+No native LLVM, distributed XA or `REQUIRES_NEW` support is implied.
+
 ## Documentation
 
-[Production and security guide](docs/production.md) · [Smart auto-configuration](docs/auto-configuration.md) · [Annotated OW controllers](docs/annotated-components.md) ·
+[Production and security guide](docs/production.md) · [Smart auto-configuration](docs/auto-configuration.md) · [Annotated OW controllers](docs/annotated-components.md) · [Mapped transactions](docs/mapped-transactions.md) ·
 [Spring module feature matrix](docs/starters.md) · [Full Spring-inspired ecosystem architecture](docs/spring-ecosystem.md) ·
 [Modulith architecture](docs/modules.md) ·
 [Bookstore example](examples/bookstore/README.md) ·
