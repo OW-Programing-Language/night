@@ -15,7 +15,7 @@ jobs:
           repository: OW-Programing-Language/ow-lang
           path: ow-lang
           # Known OW runtime with native module/functor signatures and HTTP.
-          ref: 659371da25e5fe7dfe35b57bc9e5f38c26b1a018
+          ref: b5f037a4ab010071288a4dabeb2d8e7e1354c8f8
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -34,6 +34,7 @@ jobs:
           java -jar ow-lang/target/OwIDE.jar check examples/controllers/main.ow
           java -jar ow-lang/target/OwIDE.jar check tests/controller_mount.ow
           java -jar ow-lang/target/OwIDE.jar check examples/mapped-transactions/main.ow
+          java -jar ow-lang/target/OwIDE.jar check examples/repositories/main.ow
           java -jar ow-lang/target/OwIDE.jar check tests/mapped_mount.ow
           for file in tests/lifecycle.ow tests/rollback.ow tests/cycle.ow tests/missing_dependency.ow tests/restart.ow tests/discovery.ow; do
             java -jar ow-lang/target/OwIDE.jar check "$file"
