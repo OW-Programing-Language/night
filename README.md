@@ -115,9 +115,23 @@ See [smart auto-configuration](docs/auto-configuration.md) and the
 [runnable OW example](examples/autoconfig/main.ow). This is opt-in and
 does not silently enable authentication, data access or brokers.
 
+## OW-native annotated services and controllers (experimental)
+
+Night can now use OW language `@Service`, `@Controller`, and typed
+`@Inject` field annotations from
+[ow-lang PR #63](https://github.com/OW-Programing-Language/ow-lang/pull/63).
+Imported OW classes are instantiated as per-interpreter singletons with
+validated dependency graphs; `night.mount_controllers()` invokes each
+annotated controller's `mount()` after a successful `night.boot()`.
+
+See [annotated components](docs/annotated-components.md) and the
+[annotated HTTP server example](examples/controllers/main.ow).
+This does not automatically infer routes or replace OW native modules;
+existing manual and module discovery APIs remain compatible.
+
 ## Documentation
 
-[Production and security guide](docs/production.md) · [Smart auto-configuration](docs/auto-configuration.md) ·
+[Production and security guide](docs/production.md) · [Smart auto-configuration](docs/auto-configuration.md) · [Annotated OW controllers](docs/annotated-components.md) ·
 [Spring module feature matrix](docs/starters.md) · [Full Spring-inspired ecosystem architecture](docs/spring-ecosystem.md) ·
 [Modulith architecture](docs/modules.md) ·
 [Bookstore example](examples/bookstore/README.md) ·

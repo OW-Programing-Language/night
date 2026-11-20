@@ -1,0 +1,5 @@
+# Native OW singleton business service. Not a Java/Spring bean.
+@Service
+class GreetingService:
+  fn message() -> string:
+    return: "Hello from Night and OW"

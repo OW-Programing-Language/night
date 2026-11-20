@@ -1,0 +1,16 @@
+# OW controller with type-checked service field injection.
+# The OW HTTP runtime does not capture lexical route bindings, so handlers
+# look up the scoped controller singleton explicitly.
+@Controller
+class GreetingController:
+  @Inject
+  field private greeting GreetingService
+
+  fn message() -> string:
+    return: this.greeting.message()
+
+  fn mount() -> int:
+    route "GET /api/greeting":
+      set handler: component_get("GreetingController")
+      respond: {message: handler.message()}
+    return: 1
