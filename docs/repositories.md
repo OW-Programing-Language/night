@@ -31,6 +31,7 @@ or explicit schema setup; repositories do not auto-create tables.
 | OW method | Behavior |
 | --- | --- |
 | `save(record)` | Insert one row; returns inserted row count; duplicate ID errors |
+| `updateById(id, fields)` | Update explicit non-ID columns; return affected-row count (0/1) |
 | `findById(id)` | Return OW record, or numeric 0 when missing |
 | `existsById(id)` | Return 1/0 |
 | `deleteById(id)` | Return row count |
@@ -49,6 +50,8 @@ lowercase consistently across H2 and PostgreSQL.
   identifiers. Every dynamic record column name is checked against the
   strict SQL identifier grammar; **all values are bound placeholders**,
   never SQL-interpolated.
+- `updateById(id, fields)` never creates missing rows and rejects changes to the
+  primary-key column. It accepts 1..32 safe non-ID fields.
 - OW records passed to `save` must contain 1..32 columns including
   the ID and non-null JDBC scalar values. `save` is an **insert-only**
   operation, not an upsert; there are no implicit generated IDs.
