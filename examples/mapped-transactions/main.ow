@@ -1,0 +1,20 @@
+# Night @GetMapping/@PostMapping + @Transactional end-to-end demonstration.
+# Requires the Night JDBC platform and OW annotation runtime PR #64.
+import "../../src/NightApp.ow"
+import "../../src/modules/data/NightData.ow"
+import "EntryService.ow"
+import "EntryController.ow"
+
+main:
+  set db: new NightData()
+  call: assert(db.open() == 1, "JDBC connection")
+  call: db.execute(
+    "CREATE TABLE IF NOT EXISTS night_annotation_entries (id INT PRIMARY KEY, label VARCHAR(128))",
+    []
+  )
+  set night: new NightApp()
+  call: assert(night.boot() == 1, "Night module boot")
+  call: assert(night.mount_controllers() == 1, "annotated controller discovered")
+  call: night.mount_system()
+  print: "Night mapped controller with transactions ready at http://localhost:8080"
+  serve: 8080
