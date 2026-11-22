@@ -144,6 +144,21 @@ See the [mapped-transactions guide](docs/mapped-transactions.md) and its
 [real H2-backed HTTP example](examples/mapped-transactions/main.ow).
 No native LLVM, distributed XA or `REQUIRES_NEW` support is implied.
 
+## Generated OW JDBC repositories (experimental)
+
+Night now supports OW-native `@Repository("table", "id")` singletons,
+typed `@Inject` into services, and generated
+`save`, `updateById`, `findById`, `findAll`, `existsById`, `deleteById`,
+and bounded sorted `page` operations. They use the same pooled JDBC
+connection as `@Transactional` with REQUIRED propagation.
+
+See [repository guide](docs/repositories.md) and
+[working OW example](examples/repositories/main.ow). The language
+annotation requires [OW PR #65](https://github.com/OW-Programing-Language/ow-lang/pull/65).
+This is a safe SQL repository adapter, not a full JPA ORM: no
+automatic schema generation, upsert, derived finder methods,
+entity relationships, or LLVM native lowering.
+
 ## Documentation
 
 [Production and security guide](docs/production.md) · [Smart auto-configuration](docs/auto-configuration.md) · [Annotated OW controllers](docs/annotated-components.md) · [Mapped transactions](docs/mapped-transactions.md) ·

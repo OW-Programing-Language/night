@@ -8,6 +8,7 @@ import org.owlang.night.cache.NightCache;
 import org.owlang.night.config.NightAutoConfiguration;
 import org.owlang.night.data.NightJdbc;
 import org.owlang.night.data.NightRepository;
+import org.owlang.night.data.NightCrudRepository;
 import org.owlang.night.data.NightRedis;
 import org.owlang.night.data.NightRedisStreams;
 import org.owlang.night.http.NightHttpClient;
@@ -43,6 +44,7 @@ public final class NightExtension implements RuntimeExtension {
     private final NightRabbitMQ rabbitmq = new NightRabbitMQ();
     private final NightKafka kafka = new NightKafka();
     private final NightRepository repository = new NightRepository(jdbc);
+    private final NightCrudRepository crud = new NightCrudRepository(jdbc);
     private final NightOutbox outbox = new NightOutbox(jdbc);
     private final NightInbox inbox = new NightInbox(jdbc);
     private final NightMetrics metrics = new NightMetrics();
@@ -229,6 +231,36 @@ public final class NightExtension implements RuntimeExtension {
             case "night.data.page" -> {
                 arity(operation, args, 4);
                 yield repository.page(string(args, 0), string(args, 1), integer(args, 2), integer(args, 3));
+            }
+            case "night.data.repo.save" -> {
+                arity(operation, args, 3);
+                yield crud.save(string(args, 0), string(args, 1), args.get(2));
+            }
+            case "night.data.repo.updateById" -> {
+                arity(operation, args, 4);
+                yield crud.updateById(string(args, 0), string(args, 1),
+                        args.get(2), args.get(3));
+            }
+            case "night.data.repo.findById" -> {
+                arity(operation, args, 3);
+                yield crud.findById(string(args, 0), string(args, 1), args.get(2));
+            }
+            case "night.data.repo.findAll" -> {
+                arity(operation, args, 2);
+                yield crud.findAll(string(args, 0), string(args, 1));
+            }
+            case "night.data.repo.existsById" -> {
+                arity(operation, args, 3);
+                yield crud.existsById(string(args, 0), string(args, 1), args.get(2));
+            }
+            case "night.data.repo.deleteById" -> {
+                arity(operation, args, 3);
+                yield crud.deleteById(string(args, 0), string(args, 1), args.get(2));
+            }
+            case "night.data.repo.page" -> {
+                arity(operation, args, 5);
+                yield crud.page(string(args, 0), string(args, 1),
+                        string(args, 2), integer(args, 3), integer(args, 4));
             }
             case "night.data.update_versioned" -> {
                 arity(operation, args, 6);
